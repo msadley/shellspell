@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: shellspell
+  datasource:
+    url: jdbc:sqlite:shellspell.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  jwt:
+    secret: 9a2f98287813b5d2b77a063b4f62557e1c8d7698547432f416e88514930d6bf4  # Hex 256-bit key for HMAC-SHA256
+    expiration-ms: 86400000 # 24 hours
