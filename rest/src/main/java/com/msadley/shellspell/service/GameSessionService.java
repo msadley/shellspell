@@ -149,10 +149,17 @@ public class GameSessionService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public SessionResponse getSession(String code) {
+        GameSession session = gameSessionRepository.findBySessionCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
+        return mapToResponse(session);
+    }
+
     private String generateSessionCode() {
         String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder code = new StringBuilder();
-        Random rnd = new Random();
+        java.util.Random rnd = new java.util.Random();
         while (code.length() < 6) {
             int index = (int) (rnd.nextFloat() * characters.length());
             code.append(characters.charAt(index));

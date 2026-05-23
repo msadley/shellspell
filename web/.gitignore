@@ -1,0 +1,30 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime dependency directories
+node_modules/
+jspm_packages/
+
+# Single deployable artifacts
+dist/
+dist-ssr/
+build/
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

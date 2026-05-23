@@ -54,4 +54,10 @@ public class GameSessionController {
         CastSpellResponse response = gameSessionService.castSpell(code, request.spellName(), userDetails.getUser());
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{code}")
+    public ResponseEntity<SessionResponse> getSession(@PathVariable String code) {
+        SessionResponse response = gameSessionService.getSession(code);
+        return ResponseEntity.ok(response);
+    }
 }
