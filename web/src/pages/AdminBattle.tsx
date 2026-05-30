@@ -16,30 +16,11 @@ import {
 } from "@mui/joy";
 import { AlertCircle, Undo2 } from "lucide-react";
 import { useStartSession, useDeleteSession } from "../hooks/useSession";
-import cristalImg from "../assets/cristal.png";
-import BossHealthBar from "../components/BossHealthBar";
-import BossTitle from "../components/BossTitle";
-
+import CrystalDisplay from "../components/battle/CrystalDisplay";
 import { useActiveBattle } from "../hooks/useActiveBattle";
 import BattleGridContainer from "../components/battle/BattleGridContainer";
 import SpellHistoryList from "../components/battle/SpellHistoryList";
 import VictoryOverlay from "../components/battle/VictoryOverlay";
-import { keyframes } from "@emotion/react";
-
-const floatAnimation = keyframes`
-  0% {
-    transform: translateY(0px);
-    filter: drop-shadow(0 5px 15px rgba(168, 85, 247, 0.4));
-  }
-  50% {
-    transform: translateY(-12px);
-    filter: drop-shadow(0 15px 25px rgba(168, 85, 247, 0.75));
-  }
-  100% {
-    transform: translateY(0px);
-    filter: drop-shadow(0 5px 15px rgba(168, 85, 247, 0.4));
-  }
-`;
 
 export default function AdminBattle() {
   const { code } = useParams<{ code: string }>();
@@ -369,40 +350,14 @@ export default function AdminBattle() {
             Sair
           </Button>
         </Stack>
-        {/* Boss Figure */}
-        <Stack
-          spacing={3}
-          alignItems="center"
-          justifyContent="center"
-          sx={{ flex: 1, width: "100%" }}
-        >
-          <Box
-            component="img"
-            src={cristalImg}
-            alt="Cristal"
-            sx={{
-              maxWidth: "100%",
-              maxHeight: { xs: "25vh", md: "40vh" },
-              objectFit: "contain",
-              animation: isCrystalDefeated
-                ? "none"
-                : `${floatAnimation} 4s ease-in-out infinite`,
-              filter: isCrystalDefeated
-                ? "grayscale(100%) opacity(0.3)"
-                : undefined,
-              transition: "filter 1s ease, opacity 1s ease",
-            }}
-          />
-          {/* Boss Title & Life bar */}
-          <Stack
-            spacing={2}
-            sx={{ width: "100%", maxWidth: 500, textAlign: "center" }}
-          >
-            <BossTitle isCrystalDefeated={isCrystalDefeated} />
-
-            <BossHealthBar crystalHealth={session.crystalHealth} maxHealth={maxHealth || session.crystalHealth} />
-          </Stack>
-        </Stack>
+        <CrystalDisplay
+          crystalHealth={session.crystalHealth}
+          maxHealth={maxHealth || session.crystalHealth}
+          isCrystalDefeated={isCrystalDefeated}
+          layout="title-bottom"
+          titleAlign="center"
+          maxCrystalHeight={{ xs: "25vh", md: "40vh" }}
+        />
       </Stack>
 
       {/* SPELL LOG COLUMN - Right side */}
