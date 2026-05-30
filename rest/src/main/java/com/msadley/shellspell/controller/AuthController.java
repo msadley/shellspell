@@ -5,6 +5,8 @@ import com.msadley.shellspell.dto.LoginRequest;
 import com.msadley.shellspell.dto.RegisterRequest;
 import com.msadley.shellspell.dto.UserResponse;
 import com.msadley.shellspell.service.AuthService;
+import com.msadley.shellspell.security.CookieUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,11 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("OK");
+    }
+
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse response = authService.register(request);
@@ -27,8 +34,17 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletResponse servletResponse) {
         AuthResponse response = authService.login(request);
+        CookieUtils.setTokenCookie(servletResponse, response.token());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse servletResponse) {
+        CookieUtils.clearTokenCookie(servletResponse);
+        return ResponseEntity.noContent().build();
     }
 }

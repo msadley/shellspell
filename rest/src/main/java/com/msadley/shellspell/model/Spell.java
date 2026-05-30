@@ -21,4 +21,7 @@ public class Spell {
 
     @Column(name = "damage_amount", nullable = false)
     private int damageAmount;
+
+    @Column(name = "category")
+    private String category;
 }

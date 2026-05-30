@@ -1,5 +1,6 @@
 package com.msadley.shellspell.service;
 
+import com.msadley.shellspell.dto.CastSpellDto;
 import com.msadley.shellspell.dto.CastSpellResponse;
 import com.msadley.shellspell.dto.CreateSessionRequest;
 import com.msadley.shellspell.dto.SessionResponse;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -21,15 +23,27 @@ public class GameSessionService {
     private final PlayerSessionRepository playerSessionRepository;
     private final CastSpellRepository castSpellRepository;
     private final SpellRepository spellRepository;
+    private final UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.msadley.shellspell.security.JwtTokenProvider jwtTokenProvider;
+    private final SseService sseService;
 
     public GameSessionService(GameSessionRepository gameSessionRepository,
                               PlayerSessionRepository playerSessionRepository,
                               CastSpellRepository castSpellRepository,
-                              SpellRepository spellRepository) {
+                              SpellRepository spellRepository,
+                              UserRepository userRepository,
+                              org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                              com.msadley.shellspell.security.JwtTokenProvider jwtTokenProvider,
+                              SseService sseService) {
         this.gameSessionRepository = gameSessionRepository;
         this.playerSessionRepository = playerSessionRepository;
         this.castSpellRepository = castSpellRepository;
         this.spellRepository = spellRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.sseService = sseService;
     }
 
     @Transactional
@@ -42,7 +56,8 @@ public class GameSessionService {
         GameSession session = GameSession.builder()
                 .sessionCode(sessionCode)
                 .status(SessionStatus.WAITING)
-                .dragonHealth(request.dragonHealth())
+                .crystalHealth(request.crystalHealth())
+                .maxCrystalHealth(request.crystalHealth())
                 .hostAdmin(host)
                 .build();
 
@@ -65,7 +80,9 @@ public class GameSessionService {
 
         session.setStatus(SessionStatus.ACTIVE);
         GameSession savedSession = gameSessionRepository.save(session);
-        return mapToResponse(savedSession);
+        SessionResponse response = mapToResponse(savedSession);
+        sseService.broadcast(code, response);
+        return response;
     }
 
     @Transactional
@@ -88,7 +105,9 @@ public class GameSessionService {
                 .build();
 
         playerSessionRepository.save(playerSession);
-        return mapToResponse(session);
+        SessionResponse response = mapToResponse(session);
+        sseService.broadcast(code, response);
+        return response;
     }
 
     @Transactional
@@ -123,7 +142,7 @@ public class GameSessionService {
             GameSession currentSessionState = gameSessionRepository.findBySessionCode(code)
                     .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
             if (currentSessionState.getStatus() == SessionStatus.FINISHED) {
-                throw new BadRequestException("The dragon is already defeated!");
+                throw new BadRequestException("The crystal is already defeated!");
             }
             throw new BadRequestException("Failed to apply damage. Session status might not be active.");
         }
@@ -141,10 +160,12 @@ public class GameSessionService {
         GameSession updatedSession = gameSessionRepository.findBySessionCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
+        sseService.broadcast(code, mapToResponse(updatedSession));
+
         return new CastSpellResponse(
                 spell.getName(),
                 spell.getDamageAmount(),
-                updatedSession.getDragonHealth(),
+                updatedSession.getCrystalHealth(),
                 updatedSession.getStatus()
         );
     }
@@ -154,6 +175,67 @@ public class GameSessionService {
         GameSession session = gameSessionRepository.findBySessionCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
         return mapToResponse(session);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionResponse> getAllSessions() {
+        return gameSessionRepository.findAllWithHostAdmin().stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteSession(String code) {
+        GameSession session = gameSessionRepository.findBySessionCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
+
+        castSpellRepository.deleteByGameSession(session);
+        playerSessionRepository.deleteByGameSession(session);
+        gameSessionRepository.delete(session);
+        sseService.closeSession(code);
+    }
+
+    @Transactional
+    public com.msadley.shellspell.dto.AuthResponse joinGuest(String code, String displayName) {
+        GameSession session = gameSessionRepository.findBySessionCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
+
+        if (session.getStatus() != SessionStatus.WAITING) {
+            throw new BadRequestException("You can only join sessions that are in WAITING status");
+        }
+
+        // Generate guest info
+        java.util.UUID guestUuid = java.util.UUID.randomUUID();
+        String guestUsername = displayName.trim();
+        if (guestUsername.equalsIgnoreCase("admin") || userRepository.existsByUsername(guestUsername)) {
+            String baseName = guestUsername;
+            java.util.Random rnd = new java.util.Random();
+            do {
+                guestUsername = baseName + "#" + (1000 + rnd.nextInt(9000));
+            } while (userRepository.existsByUsername(guestUsername));
+        }
+        String password = "guest_" + guestUuid;
+
+        // Create and save guest user
+        User user = User.builder()
+                .username(guestUsername)
+                .password(passwordEncoder.encode(password))
+                .role(UserRole.PLAYER)
+                .build();
+        User savedUser = userRepository.save(user);
+
+        // Add guest to player sessions
+        PlayerSession playerSession = PlayerSession.builder()
+                .user(savedUser)
+                .gameSession(session)
+                .build();
+        playerSessionRepository.save(playerSession);
+
+        sseService.broadcast(code, mapToResponse(session));
+
+        // Generate JWT token using UUID string representation
+        String token = jwtTokenProvider.generateToken(savedUser.getId().toString());
+        return new com.msadley.shellspell.dto.AuthResponse(token, savedUser.getUsername(), savedUser.getRole().name());
     }
 
     private String generateSessionCode() {
@@ -172,11 +254,32 @@ public class GameSessionService {
     }
 
     private SessionResponse mapToResponse(GameSession session) {
+        // Fetch all players in this session
+        List<PlayerSession> playerSessions = playerSessionRepository.findByGameSessionWithUser(session);
+        List<String> players = playerSessions.stream()
+                .map(playerSession -> playerSession.getUser().getUsername())
+                .toList();
+
+        // Fetch recent spell casts for this session
+        List<CastSpell> castSpells = castSpellRepository.findByGameSessionWithUserAndSpell(session);
+        List<CastSpellDto> recentCasts = castSpells.stream()
+                .map(castSpell -> new CastSpellDto(
+                        castSpell.getUser().getUsername(),
+                        castSpell.getSpell().getName(),
+                        castSpell.getSpell().getCategory(),
+                        castSpell.getSpell().getDamageAmount(),
+                        castSpell.getCastAt().toString()
+                ))
+                .toList();
+
         return new SessionResponse(
                 session.getSessionCode(),
                 session.getStatus(),
-                session.getDragonHealth(),
-                session.getHostAdmin().getUsername()
+                session.getCrystalHealth(),
+                session.getMaxCrystalHealth() != null ? session.getMaxCrystalHealth() : session.getCrystalHealth(),
+                session.getHostAdmin().getUsername(),
+                players,
+                recentCasts
         );
     }
 }

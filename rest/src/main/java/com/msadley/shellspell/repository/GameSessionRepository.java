@@ -9,14 +9,19 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 public interface GameSessionRepository extends JpaRepository<GameSession, Long> {
-    Optional<GameSession> findBySessionCode(String sessionCode);
+    @Query("SELECT g FROM GameSession g JOIN FETCH g.hostAdmin WHERE g.sessionCode = :sessionCode")
+    Optional<GameSession> findBySessionCode(@Param("sessionCode") String sessionCode);
+
+    @Query("SELECT g FROM GameSession g JOIN FETCH g.hostAdmin")
+    java.util.List<GameSession> findAllWithHostAdmin();
+
     boolean existsBySessionCode(String sessionCode);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("UPDATE GameSession g SET " +
-           "g.dragonHealth = CASE WHEN (g.dragonHealth - :damage) < 0 THEN 0 ELSE (g.dragonHealth - :damage) END, " +
-           "g.status = CASE WHEN (g.dragonHealth - :damage) <= 0 THEN com.msadley.shellspell.model.SessionStatus.FINISHED ELSE g.status END " +
+           "g.crystalHealth = CASE WHEN (g.crystalHealth - :damage) < 0 THEN 0 ELSE (g.crystalHealth - :damage) END, " +
+           "g.status = CASE WHEN (g.crystalHealth - :damage) <= 0 THEN com.msadley.shellspell.model.SessionStatus.FINISHED ELSE g.status END " +
            "WHERE g.sessionCode = :code AND g.status = com.msadley.shellspell.model.SessionStatus.ACTIVE")
     int applyDamage(@Param("code") String code, @Param("damage") int damage);
 }

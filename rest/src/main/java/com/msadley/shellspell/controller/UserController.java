@@ -1,6 +1,8 @@
 package com.msadley.shellspell.controller;
 
 import com.msadley.shellspell.dto.ChangePasswordRequest;
+import com.msadley.shellspell.dto.UserResponse;
+import com.msadley.shellspell.model.User;
 import com.msadley.shellspell.security.CustomUserDetails;
 import com.msadley.shellspell.service.UserService;
 import jakarta.validation.Valid;
@@ -16,6 +18,13 @@ public class UserController {
 
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        User user = userDetails.getUser();
+        UserResponse response = new UserResponse(user.getId(), user.getUsername(), user.getRole());
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/me/password")

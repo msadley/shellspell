@@ -5,6 +5,6 @@ import com.msadley.shellspell.model.SessionStatus;
 public record CastSpellResponse(
     String spellName,
     int damageDealt,
-    int remainingDragonHealth,
+    int remainingCrystalHealth,
     SessionStatus gameStatus
 ) {}

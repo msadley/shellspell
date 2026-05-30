@@ -1,29 +1,5 @@
-export type UserRole = 'ADMIN' | 'PLAYER';
-export type SessionStatus = 'WAITING' | 'ACTIVE' | 'FINISHED';
+export type { UserRole, UserResponse } from "../schemas/users";
+export type { SessionStatus, SessionResponse, CastSpellResponse, CreateSessionRequest, JoinGuestRequest, CastSpellDto } from "../schemas/sessions";
+export type { AuthResponse, ChangePasswordRequest, RegisterRequest, LoginRequest } from "../schemas/auth";
+export type { SpellResponse, CreateSpellRequest } from "../schemas/spells";
 
-export interface UserResponse {
-  id: number;
-  username: string;
-  email: string;
-  role: UserRole;
-}
-
-export interface AuthResponse {
-  token: string;
-  username: string;
-  role: string;
-}
-
-export interface SessionResponse {
-  sessionCode: string;
-  status: SessionStatus;
-  dragonHealth: number;
-  hostAdminUsername: string;
-}
-
-export interface CastSpellResponse {
-  spellName: string;
-  damageDealt: number;
-  remainingDragonHealth: number;
-  gameStatus: SessionStatus;
-}

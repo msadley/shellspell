@@ -1,10 +1,10 @@
 package com.msadley.shellspell.dto;
 
 import com.msadley.shellspell.model.UserRole;
+import java.util.UUID;
 
 public record UserResponse(
-    Long id,
+    UUID id,
     String username,
-    String email,
     UserRole role
 ) {}

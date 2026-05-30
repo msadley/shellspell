@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: shellspell-db
+    environment:
+      POSTGRES_DB: shellspell
+      POSTGRES_USER: shellspell
+      POSTGRES_PASSWORD: shellspell
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shellspell -d shellspell"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./rest
+      dockerfile: Dockerfile
+      target: production
+    container_name: shellspell-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/shellspell
+      - SPRING_DATASOURCE_USERNAME=shellspell
+      - SPRING_DATASOURCE_PASSWORD=shellspell
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - JWT_SECRET=${JWT_SECRET:-9a2f98287813b5d2b77a063b4f62557e1c8d7698547432f416e88514930d6bf4}
+      - JWT_EXPIRATION_MS=${JWT_EXPIRATION_MS:-86400000}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/auth/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: production
+    container_name: shellspell-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./web/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

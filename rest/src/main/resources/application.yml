@@ -1,11 +1,17 @@
 spring:
   application:
     name: shellspell
+  threads:
+    virtual:
+      enabled: true
   datasource:
-    url: jdbc:sqlite:shellspell.db
-    driver-class-name: org.sqlite.JDBC
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shellspell}
+    username: ${SPRING_DATASOURCE_USERNAME:shellspell}
+    password: ${SPRING_DATASOURCE_PASSWORD:shellspell}
+    driver-class-name: org.postgresql.Driver
   jpa:
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    open-in-view: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -15,5 +21,11 @@ spring:
 
 app:
   jwt:
-    secret: 9a2f98287813b5d2b77a063b4f62557e1c8d7698547432f416e88514930d6bf4  # Hex 256-bit key for HMAC-SHA256
-    expiration-ms: 86400000 # 24 hours
+    secret: ${JWT_SECRET:9a2f98287813b5d2b77a063b4f62557e1c8d7698547432f416e88514930d6bf4} # Hex 256-bit key for HMAC-SHA256
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+

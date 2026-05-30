@@ -23,8 +23,11 @@ public class GameSession {
     @Column(nullable = false)
     private SessionStatus status;
 
-    @Column(name = "dragon_health", nullable = false)
-    private int dragonHealth;
+    @Column(name = "crystal_health", nullable = false)
+    private int crystalHealth;
+
+    @Column(name = "max_crystal_health")
+    private Integer maxCrystalHealth;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "host_admin_id", nullable = false)
