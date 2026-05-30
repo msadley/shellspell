@@ -12,8 +12,10 @@ import { useAdminLogin } from "../hooks/useAuth";
 import { useAuthStore } from "../store/useAuthStore";
 import { useUIStore } from "../store/useUIStore";
 import HomeLayout from "../components/HomeLayout";
+import { useDocumentMetadata } from "../hooks/useDocumentMetadata";
 
 export default function AdminAuth() {
+  useDocumentMetadata("Painel do Administrador - Autenticação", "Acesse a área administrativa do ShellSpell.");
   const navigate = useNavigate();
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");

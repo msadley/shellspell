@@ -15,8 +15,11 @@ import { getSession } from "../api/sessions";
 import { useUIStore } from "../store/useUIStore";
 import { useAuthStore } from "../store/useAuthStore";
 import HomeLayout from "../components/HomeLayout";
+import { useDocumentMetadata } from "../hooks/useDocumentMetadata";
 
 export default function Home() {
+  useDocumentMetadata("Entrar na Arena", "Entre em uma sessão de ShellSpell como jogador e conjure feitiços contra o Cristal.");
+  
   const navigate = useNavigate();
   const [playerName, setPlayerName] = useState("");
   const [sessionCode, setSessionCode] = useState("");

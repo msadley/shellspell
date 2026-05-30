@@ -10,8 +10,10 @@ import CreateSessionCard from "../components/CreateSessionCard";
 import SessionListCard from "../components/SessionListCard";
 import CreateSpellCard from "../components/CreateSpellCard";
 import SpellListCard from "../components/SpellListCard";
+import { useDocumentMetadata } from "../hooks/useDocumentMetadata";
 
 export default function AdminHome() {
+  useDocumentMetadata("Painel do Administrador", "Gerencie sessões de jogo e edite o grimório de feitiços de ShellSpell.");
   const [activeTab, setActiveTab] = useState(0);
   const errorMsg = useUIStore((state) => state.errorMsg);
   const setErrorMsg = useUIStore((state) => state.setErrorMsg);

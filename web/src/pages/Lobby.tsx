@@ -15,9 +15,12 @@ import { useSession } from "../hooks/useSession";
 import { useAuthStore } from "../store/useAuthStore";
 import HomeLayout from "../components/HomeLayout";
 import GameErrorOverlay from "../components/battle/GameErrorOverlay";
+import { useDocumentMetadata } from "../hooks/useDocumentMetadata";
 
 export default function Lobby() {
   const { code } = useParams<{ code: string }>();
+  useDocumentMetadata(`Aguardando Partida - Sala ${code || ""}`, "Aguardando o anfitrião iniciar a partida de ShellSpell.");
+
   const navigate = useNavigate();
 
   const { alias, logout } = useAuthStore();

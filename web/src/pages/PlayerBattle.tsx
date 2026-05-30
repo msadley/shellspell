@@ -11,9 +11,12 @@ import SpellHistoryList from '../components/battle/SpellHistoryList';
 import VictoryOverlay from '../components/battle/VictoryOverlay';
 import CrystalDisplay from '../components/battle/CrystalDisplay';
 import GameErrorOverlay from '../components/battle/GameErrorOverlay';
+import { useDocumentMetadata } from '../hooks/useDocumentMetadata';
 
 export default function PlayerBattle() {
   const { code } = useParams<{ code: string }>();
+  useDocumentMetadata(`Batalha Ativa - Sala ${code || ""}`, "Lute contra o Cristal conjurando magias na arena ShellSpell.");
+
   const navigate = useNavigate();
   const { logout } = useAuthStore();
   

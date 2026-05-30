@@ -12,8 +12,10 @@ import {
 } from "@mui/joy";
 import { useChangePassword } from "../hooks/useAuth";
 import HomeLayout from "../components/HomeLayout";
+import { useDocumentMetadata } from "../hooks/useDocumentMetadata";
 
 export default function ChangePassword() {
+  useDocumentMetadata("Alterar Senha do Administrador", "Altere as credenciais de acesso do administrador do ShellSpell.");
   const navigate = useNavigate();
 
   const [currentPassword, setCurrentPassword] = useState("");

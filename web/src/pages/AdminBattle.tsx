@@ -21,9 +21,12 @@ import { useActiveBattle } from "../hooks/useActiveBattle";
 import BattleGridContainer from "../components/battle/BattleGridContainer";
 import SpellHistoryList from "../components/battle/SpellHistoryList";
 import VictoryOverlay from "../components/battle/VictoryOverlay";
+import { useDocumentMetadata } from "../hooks/useDocumentMetadata";
 
 export default function AdminBattle() {
   const { code } = useParams<{ code: string }>();
+  useDocumentMetadata(`Monitoramento - Sala ${code || ""}`, "Painel de monitoramento em tempo real para administrador do ShellSpell.");
+
   const navigate = useNavigate();
   const [showCancelModal, setShowCancelModal] = useState(false);
 
