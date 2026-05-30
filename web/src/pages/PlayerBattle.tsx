@@ -1,10 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Box, Button, Card, Stack, Typography, CircularProgress,
-  Input, Sheet, Alert, Modal, ModalDialog, DialogTitle, DialogContent, DialogActions
+  Box, Button, Card, Stack, CircularProgress, Input, Alert
 } from '@mui/joy';
-import { AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useActiveBattle } from '../hooks/useActiveBattle';
 import { useSpellCaster } from '../hooks/useSpellCaster';
@@ -12,6 +10,7 @@ import BattleGridContainer from '../components/battle/BattleGridContainer';
 import SpellHistoryList from '../components/battle/SpellHistoryList';
 import VictoryOverlay from '../components/battle/VictoryOverlay';
 import CrystalDisplay from '../components/battle/CrystalDisplay';
+import GameErrorOverlay from '../components/battle/GameErrorOverlay';
 
 export default function PlayerBattle() {
   const { code } = useParams<{ code: string }>();
@@ -72,53 +71,14 @@ export default function PlayerBattle() {
     const axiosError = error as any;
     const isNetworkOrServerError = axiosError && (!axiosError.response || axiosError.response.status >= 500);
 
-    if (isNetworkOrServerError) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: 'black', p: 3 }}>
-          <Sheet variant="outlined" sx={{ maxWidth: 400, width: '100%', p: 3, borderRadius: 'lg', textAlign: 'center' }}>
-            <Stack spacing={2} alignItems="center">
-              <AlertCircle size={48} color="#ffa726" />
-              <Typography level="h4" sx={{ color: 'white' }}>
-                Erro de Conexão
-              </Typography>
-              <Typography level="body-sm" sx={{ color: 'neutral.400' }}>
-                Não foi possível conectar ao servidor. Verifique sua conexão.
-              </Typography>
-              <Button color="primary" variant="solid" onClick={() => window.location.reload()}>Tentar Novamente</Button>
-            </Stack>
-          </Sheet>
-        </Box>
-      );
-    }
-
-    if (isSessionCancelled) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: 'black', p: 3 }}>
-          <Modal open={true} disableEscapeKeyDown>
-            <ModalDialog variant="outlined" sx={{ maxWidth: 400, width: '100%' }}>
-              <DialogTitle sx={{ color: "white" }}>Sessão Cancelada</DialogTitle>
-              <DialogContent sx={{ color: 'neutral.400' }}>
-                A sessão foi cancelada pelo administrador. Você foi desconectado.
-              </DialogContent>
-              <DialogActions>
-                <Button color="primary" variant="solid" onClick={() => { logout(code); navigate('/'); }}>Sair</Button>
-              </DialogActions>
-            </ModalDialog>
-          </Modal>
-        </Box>
-      );
-    }
-
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: 'black', p: 3 }}>
-        <Sheet variant="outlined" sx={{ maxWidth: 400, width: '100%', p: 3, borderRadius: 'lg' }}>
-          <Stack spacing={2} alignItems="center">
-            <AlertCircle size={48} color="#f44336" />
-            <Typography level="h4">Sessão Inválida</Typography>
-            <Button color="neutral" variant="soft" onClick={() => { logout(code); navigate('/'); }}>Voltar</Button>
-          </Stack>
-        </Sheet>
-      </Box>
+      <GameErrorOverlay
+        type={isNetworkOrServerError ? 'connection' : isSessionCancelled ? 'cancelled' : 'invalid'}
+        onExit={() => {
+          logout(code);
+          navigate('/');
+        }}
+      />
     );
   }
 

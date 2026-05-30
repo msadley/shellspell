@@ -9,16 +9,12 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
-  Modal,
-  ModalDialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from "@mui/joy";
-import { Copy, Check, LogOut, ShieldAlert } from "lucide-react";
+import { Copy, Check, LogOut } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { useAuthStore } from "../store/useAuthStore";
 import HomeLayout from "../components/HomeLayout";
+import GameErrorOverlay from "../components/battle/GameErrorOverlay";
 
 export default function Lobby() {
   const { code } = useParams<{ code: string }>();
@@ -79,112 +75,13 @@ export default function Lobby() {
     const axiosError = error as any;
     const isNetworkOrServerError = axiosError && (!axiosError.response || axiosError.response.status >= 500);
 
-    if (isNetworkOrServerError) {
-      return (
-        <HomeLayout>
-          <Card variant="outlined" sx={{ width: "100%", borderRadius: "lg" }}>
-            <Stack spacing={2} alignItems="center">
-              <ShieldAlert size={48} color="#ffa726" />
-              <Typography level="h4" sx={{ color: "white" }}>
-                Erro de Conexão
-              </Typography>
-              <Typography
-                level="body-sm"
-                sx={{ color: "neutral.400", textAlign: "center" }}
-              >
-                Não foi possível conectar ao servidor. Verifique sua conexão.
-              </Typography>
-              <Button
-                color="primary"
-                variant="solid"
-                onClick={() => window.location.reload()}
-              >
-                Tentar Novamente
-              </Button>
-            </Stack>
-          </Card>
-        </HomeLayout>
-      );
-    }
-
-    if (isSessionCancelled) {
-      return (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: "100vh",
-            bgcolor: "black",
-            p: 3,
-          }}
-        >
-          <Modal open={true} disableEscapeKeyDown>
-            <ModalDialog
-              variant="outlined"
-              sx={{
-                maxWidth: 400,
-                width: "100%",
-                borderRadius: "md",
-                boxShadow: "lg",
-              }}
-            >
-              <DialogTitle sx={{ color: "white" }}>Sessão Cancelada</DialogTitle>
-              <DialogContent sx={{ color: "neutral.400" }}>
-                A sessão foi cancelada pelo administrador. Você foi desconectado.
-              </DialogContent>
-              <DialogActions>
-                <Button
-                  color="primary"
-                  variant="solid"
-                  onClick={handleLeave}
-                >
-                  Sair
-                </Button>
-              </DialogActions>
-            </ModalDialog>
-          </Modal>
-        </Box>
-      );
-    }
-
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-          bgcolor: "black",
-          p: 3,
-        }}
-      >
-        <Card
-          variant="outlined"
-          sx={{ maxWidth: 400, width: "100%", borderRadius: "lg" }}
-        >
-          <Stack spacing={2} alignItems="center">
-            <ShieldAlert size={48} color="#ff4d4f" />
-            <Typography level="h4" sx={{ color: "white" }}>
-              Sala Não Encontrada
-            </Typography>
-            <Typography
-              level="body-sm"
-              sx={{ color: "neutral.400", textAlign: "center" }}
-            >
-              Não foi possível carregar a sessão {code}. O código pode estar
-              expirado ou incorreto.
-            </Typography>
-            <Button
-              color="neutral"
-              variant="soft"
-              onClick={handleLeave}
-            >
-              Voltar à Tela Inicial
-            </Button>
-          </Stack>
-        </Card>
-      </Box>
+      <GameErrorOverlay
+        type={isNetworkOrServerError ? "connection" : isSessionCancelled ? "cancelled" : "invalid"}
+        sessionCode={code}
+        onExit={handleLeave}
+        useHomeLayout={isNetworkOrServerError}
+      />
     );
   }
 
