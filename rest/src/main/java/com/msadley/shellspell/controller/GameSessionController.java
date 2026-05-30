@@ -95,6 +95,22 @@ public class GameSessionController {
     return emitter;
   }
 
+  @GetMapping("/stream")
+  public SseEmitter streamAllSessions() {
+    List<SessionResponse> currentSessions = gameSessionService.getAllSessions();
+    SseEmitter emitter = sseService.register("all_sessions");
+
+    try {
+      emitter.send(SseEmitter.event()
+          .name("session-update")
+          .data(currentSessions));
+    } catch (Exception e) {
+      emitter.complete();
+    }
+
+    return emitter;
+  }
+
   @GetMapping
   public ResponseEntity<List<SessionResponse>> getAllSessions() {
     List<SessionResponse> response = gameSessionService.getAllSessions();

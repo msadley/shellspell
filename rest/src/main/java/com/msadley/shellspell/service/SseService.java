@@ -67,7 +67,7 @@ public class SseService {
         return emitter;
     }
 
-    public void broadcast(String code, SessionResponse response) {
+    public void broadcast(String code, Object response) {
         List<SafeSseEmitter> list = emittersMap.get(code);
         if (list == null) return;
 
@@ -82,6 +82,10 @@ public class SseService {
                 }
             });
         }
+    }
+
+    public void broadcastSessionsList(List<SessionResponse> list) {
+        broadcast("all_sessions", list);
     }
 
     public void closeSession(String code) {

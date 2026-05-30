@@ -121,13 +121,35 @@ export function useCastSpell() {
   });
 }
 
-// Fetch all game sessions (ADMIN only)
+// Fetch all game sessions (ADMIN only, SSE-driven updates)
 export function useSessions() {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const username = useAuthStore((state) => state.username);
+
+  const query = useQuery({
     queryKey: ["sessions"],
     queryFn: () => getSessions(),
-    refetchInterval: 2000, // Poll every 2 seconds for real-time list updates
+    enabled: !!username,
   });
+
+  useEffect(() => {
+    if (!username) return;
+
+    const onUpdate = (updatedSessions: any) => {
+      queryClient.setQueryData(["sessions"], updatedSessions);
+    };
+
+    const onDeleted = () => {
+      // Deleted logic handled via list broadcasts
+    };
+
+    const unsubscribe = sseManager.subscribe("all_sessions", onUpdate, onDeleted);
+    return () => {
+      unsubscribe();
+    };
+  }, [username, queryClient]);
+
+  return query;
 }
 
 // Delete a game session (ADMIN only)

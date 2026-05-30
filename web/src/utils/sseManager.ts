@@ -21,9 +21,10 @@ class SSEManager {
       const token = typeof window !== "undefined"
         ? localStorage.getItem("active_token")
         : null;
+      const streamPath = code === "all_sessions" ? "/sessions/stream" : `/sessions/${code}/stream`;
       const url = token
-        ? `${apiBaseUrl}/sessions/${code}/stream?token=${encodeURIComponent(token)}`
-        : `${apiBaseUrl}/sessions/${code}/stream`;
+        ? `${apiBaseUrl}${streamPath}?token=${encodeURIComponent(token)}`
+        : `${apiBaseUrl}${streamPath}`;
       const es = new EventSource(url);
       
       const connection: SSEConnection = {

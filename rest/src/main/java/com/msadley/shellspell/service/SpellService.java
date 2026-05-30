@@ -60,8 +60,45 @@ public class SpellService {
 
     @Transactional
     public List<SpellResponse> createSpellsBatch(List<CreateSpellRequest> requests) {
-        return requests.stream()
-                .map(this::createSpell)
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> inputNames = requests.stream().map(r -> r.name().trim()).toList();
+        List<String> lowerInputNames = inputNames.stream().map(String::toLowerCase).toList();
+
+        // 1. Check for duplicates within the batch request itself
+        long distinctCount = lowerInputNames.stream().distinct().count();
+        if (distinctCount < lowerInputNames.size()) {
+            throw new BadRequestException("Duplicate spell names found within the batch request itself");
+        }
+
+        // 2. Check for duplicates in the database in a single query
+        List<Spell> existingSpells = spellRepository.findByNamesIgnoreCase(lowerInputNames);
+        if (!existingSpells.isEmpty()) {
+            List<String> duplicateNames = existingSpells.stream().map(Spell::getName).toList();
+            throw new BadRequestException("Spells already exist: " + String.join(", ", duplicateNames));
+        }
+
+        // 3. Map and batch validate categories
+        List<Spell> spellsToSave = requests.stream()
+                .map(req -> {
+                    String catLower = req.category().trim().toLowerCase();
+                    if (!List.of("arcano", "runico", "etereo", "primal", "umbral").contains(catLower)) {
+                        throw new BadRequestException("Category must be one of: arcano, runico, etereo, primal, umbral");
+                    }
+                    return Spell.builder()
+                            .name(req.name().trim())
+                            .damageAmount(req.damageAmount())
+                            .category(catLower)
+                            .build();
+                })
+                .toList();
+
+        // 4. Batch insert
+        List<Spell> savedSpells = spellRepository.saveAll(spellsToSave);
+        return savedSpells.stream()
+                .map(s -> new SpellResponse(s.getId(), s.getName(), s.getDamageAmount(), s.getCategory()))
                 .toList();
     }
 

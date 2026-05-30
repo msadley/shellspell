@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/sessions/*/join-guest").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/sessions").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/sessions").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/sessions/stream").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/sessions/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/api/sessions/*/start").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/sessions/*/join").authenticated()

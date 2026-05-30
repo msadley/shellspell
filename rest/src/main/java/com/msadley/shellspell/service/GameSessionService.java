@@ -62,7 +62,9 @@ public class GameSessionService {
                 .build();
 
         GameSession savedSession = gameSessionRepository.save(session);
-        return mapToResponse(savedSession);
+        SessionResponse response = mapToResponse(savedSession);
+        sseService.broadcastSessionsList(getAllSessions());
+        return response;
     }
 
     @Transactional
@@ -82,6 +84,7 @@ public class GameSessionService {
         GameSession savedSession = gameSessionRepository.save(session);
         SessionResponse response = mapToResponse(savedSession);
         sseService.broadcast(code, response);
+        sseService.broadcastSessionsList(getAllSessions());
         return response;
     }
 
@@ -107,6 +110,7 @@ public class GameSessionService {
         playerSessionRepository.save(playerSession);
         SessionResponse response = mapToResponse(session);
         sseService.broadcast(code, response);
+        sseService.broadcastSessionsList(getAllSessions());
         return response;
     }
 
@@ -193,6 +197,7 @@ public class GameSessionService {
         playerSessionRepository.deleteByGameSession(session);
         gameSessionRepository.delete(session);
         sseService.closeSession(code);
+        sseService.broadcastSessionsList(getAllSessions());
     }
 
     @Transactional
@@ -232,6 +237,7 @@ public class GameSessionService {
         playerSessionRepository.save(playerSession);
 
         sseService.broadcast(code, mapToResponse(session));
+        sseService.broadcastSessionsList(getAllSessions());
 
         // Generate JWT token using UUID string representation
         String token = jwtTokenProvider.generateToken(savedUser.getId().toString());
