@@ -18,9 +18,8 @@ class SSEManager {
   ) {
     if (!this.connections[code]) {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
-      const isAdminRoute = typeof window !== "undefined" && window.location.pathname.startsWith('/admin');
       const token = typeof window !== "undefined"
-        ? (isAdminRoute ? localStorage.getItem("admin_token") : localStorage.getItem("player_token"))
+        ? localStorage.getItem("active_token")
         : null;
       const url = token
         ? `${apiBaseUrl}/sessions/${code}/stream?token=${encodeURIComponent(token)}`

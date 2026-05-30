@@ -47,7 +47,11 @@ public class SseService {
     }
 
     private final Map<String, List<SafeSseEmitter>> emittersMap = new ConcurrentHashMap<>();
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final org.springframework.core.task.AsyncTaskExecutor taskExecutor;
+
+    public SseService(@org.springframework.beans.factory.annotation.Qualifier("applicationTaskExecutor") org.springframework.core.task.AsyncTaskExecutor taskExecutor) {
+        this.taskExecutor = taskExecutor;
+    }
 
     public SseEmitter register(String code) {
         // Emitter timeout set to 3 minutes
@@ -68,7 +72,7 @@ public class SseService {
         if (list == null) return;
 
         for (SafeSseEmitter safeEmitter : list) {
-            executor.submit(() -> {
+            taskExecutor.execute(() -> {
                 try {
                     safeEmitter.send(SseEmitter.event()
                             .name("session-update")
@@ -84,7 +88,7 @@ public class SseService {
         List<SafeSseEmitter> list = emittersMap.remove(code);
         if (list != null) {
             for (SafeSseEmitter safeEmitter : list) {
-                executor.submit(() -> {
+                taskExecutor.execute(() -> {
                     try {
                         safeEmitter.send(SseEmitter.event()
                                 .name("session-deleted")
@@ -102,7 +106,7 @@ public class SseService {
     public void sendHeartbeat() {
         emittersMap.forEach((code, list) -> {
             for (SafeSseEmitter safeEmitter : list) {
-                executor.submit(() -> {
+                taskExecutor.execute(() -> {
                     try {
                         safeEmitter.send(SseEmitter.event()
                                 .comment("ping"));
