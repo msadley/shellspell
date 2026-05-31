@@ -188,10 +188,123 @@ public class GameSessionService {
                 .toList();
     }
 
+    private void ensureSpellsExist() {
+        if (spellRepository.count() == 0) {
+            List<Spell> defaultSpells = List.of(
+                Spell.builder().name("Projeção Astral").damageAmount(15).category("arcano").build(),
+                Spell.builder().name("Míssil Mágico").damageAmount(20).category("arcano").build(),
+                Spell.builder().name("Explosão Arcana").damageAmount(30).category("arcano").build(),
+                Spell.builder().name("Distorção Temporal").damageAmount(25).category("arcano").build(),
+                
+                Spell.builder().name("Runa Explosiva").damageAmount(35).category("runico").build(),
+                Spell.builder().name("Escudo Rúnico").damageAmount(10).category("runico").build(),
+                Spell.builder().name("Sobrecarga de Mana").damageAmount(40).category("runico").build(),
+                Spell.builder().name("Marca da Tempestade").damageAmount(30).category("runico").build(),
+                
+                Spell.builder().name("Lança de Luz").damageAmount(25).category("etereo").build(),
+                Spell.builder().name("Raio Estelar").damageAmount(35).category("etereo").build(),
+                Spell.builder().name("Impacto Espacial").damageAmount(30).category("etereo").build(),
+                Spell.builder().name("Pulsar Cósmico").damageAmount(45).category("etereo").build(),
+                
+                Spell.builder().name("Bola de Fogo").damageAmount(30).category("primal").build(),
+                Spell.builder().name("Fogo de Artifício").damageAmount(20).category("primal").build(),
+                Spell.builder().name("Tempestade de Raios").damageAmount(40).category("primal").build(),
+                Spell.builder().name("Terremoto").damageAmount(35).category("primal").build(),
+                
+                Spell.builder().name("Dreno de Vida").damageAmount(25).category("umbral").build(),
+                Spell.builder().name("Seta Sombria").damageAmount(20).category("umbral").build(),
+                Spell.builder().name("Chama Negra").damageAmount(35).category("umbral").build(),
+                Spell.builder().name("Pesadelo").damageAmount(30).category("umbral").build()
+            );
+            spellRepository.saveAll(defaultSpells);
+        }
+    }
+
     @Transactional
-    public void deleteSession(String code) {
+    public SessionResponse createMockBigResult() {
+        // 1. Delete if exists
+        gameSessionRepository.findBySessionCode("MOCK80").ifPresent(session -> {
+            castSpellRepository.deleteByGameSession(session);
+            playerSessionRepository.deleteByGameSession(session);
+            gameSessionRepository.delete(session);
+            gameSessionRepository.flush();
+        });
+
+        // 2. Ensure spells exist
+        ensureSpellsExist();
+
+        // 3. Find/Create admin
+        User admin = userRepository.findByUsername("admin")
+                .orElseGet(() -> userRepository.save(User.builder()
+                        .id(java.util.UUID.randomUUID().toString())
+                        .username("admin")
+                        .password(passwordEncoder.encode("admin"))
+                        .role(UserRole.ADMIN)
+                        .build()));
+
+        // 4. Create GameSession
+        GameSession session = GameSession.builder()
+                .sessionCode("MOCK80")
+                .status(SessionStatus.FINISHED)
+                .crystalHealth(0)
+                .maxCrystalHealth(10000)
+                .hostAdmin(admin)
+                .resultsRevealed(false)
+                .build();
+        session = gameSessionRepository.save(session);
+
+        // 5. Create 80 players and cast spells
+        List<Spell> spells = spellRepository.findAll();
+        Random random = new Random();
+        for (int i = 1; i <= 80; i++) {
+            String pName = "Mago " + i;
+            String pUsername = "MOCK80:" + pName;
+            String pId = "mock_user_" + i;
+
+            User playerUser = userRepository.findById(pId)
+                    .orElseGet(() -> userRepository.save(User.builder()
+                            .id(pId)
+                            .username(pUsername)
+                            .password("guest")
+                            .role(UserRole.PLAYER)
+                            .build()));
+
+            PlayerSession ps = PlayerSession.builder()
+                    .user(playerUser)
+                    .gameSession(session)
+                    .build();
+            playerSessionRepository.save(ps);
+
+            // Shuffling spells and pick some for this user
+            int spellsCount = random.nextInt(6) + 1; // 1 to 6 spells
+            java.util.Collections.shuffle(spells);
+            for (int j = 0; j < Math.min(spellsCount, spells.size()); j++) {
+                Spell s = spells.get(j);
+                CastSpell cs = CastSpell.builder()
+                        .user(playerUser)
+                        .gameSession(session)
+                        .spell(s)
+                        .castAt(LocalDateTime.now().minusSeconds(random.nextInt(3600)))
+                        .build();
+                castSpellRepository.save(cs);
+            }
+        }
+
+        // Return mapped response
+        SessionResponse response = mapToResponse(session);
+        sseService.broadcast("MOCK80", response);
+        sseService.broadcastSessionsList(getAllSessions());
+        return response;
+    }
+
+    @Transactional
+    public void deleteSession(String code, User host) {
         GameSession session = gameSessionRepository.findBySessionCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
+
+        if (!session.getHostAdmin().getId().equals(host.getId())) {
+            throw new UnauthorizedException("Only the host admin can delete this session");
+        }
 
         castSpellRepository.deleteByGameSession(session);
         playerSessionRepository.deleteByGameSession(session);
@@ -201,47 +314,65 @@ public class GameSessionService {
     }
 
     @Transactional
-    public com.msadley.shellspell.dto.AuthResponse joinGuest(String code, String displayName) {
+    public com.msadley.shellspell.dto.AuthResponse joinGuest(String code, String displayName, String matricula) {
         GameSession session = gameSessionRepository.findBySessionCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
 
-        if (session.getStatus() != SessionStatus.WAITING) {
+        if (session.getStatus() != SessionStatus.WAITING && !"MOCK80".equals(code)) {
             throw new BadRequestException("You can only join sessions that are in WAITING status");
         }
 
-        // Generate guest info
-        java.util.UUID guestUuid = java.util.UUID.randomUUID();
-        String guestUsername = displayName.trim();
-        if (guestUsername.equalsIgnoreCase("admin") || userRepository.existsByUsername(guestUsername)) {
-            String baseName = guestUsername;
-            java.util.Random rnd = new java.util.Random();
-            do {
-                guestUsername = baseName + "#" + (1000 + rnd.nextInt(9000));
-            } while (userRepository.existsByUsername(guestUsername));
+        // Check if user with this matricula already exists
+        User user = userRepository.findById(matricula).orElse(null);
+        if (user == null) {
+            String guestUsername = code + ":" + displayName.trim();
+            if (displayName.trim().equalsIgnoreCase("admin") || userRepository.existsByUsername(guestUsername)) {
+                String baseName = guestUsername;
+                java.util.Random rnd = new java.util.Random();
+                do {
+                    guestUsername = baseName + "#" + (1000 + rnd.nextInt(9000));
+                } while (userRepository.existsByUsername(guestUsername));
+            }
+
+            // Create and save guest user with plain password to avoid CPU exhaustion under BCrypt
+            user = User.builder()
+                    .id(matricula)
+                    .username(guestUsername)
+                    .password("guest")
+                    .role(UserRole.PLAYER)
+                    .build();
+            user = userRepository.save(user);
+        } else {
+            String newUsername = code + ":" + displayName.trim();
+            if (!user.getUsername().equals(newUsername)) {
+                if (displayName.trim().equalsIgnoreCase("admin") || userRepository.existsByUsername(newUsername)) {
+                    String baseName = newUsername;
+                    java.util.Random rnd = new java.util.Random();
+                    do {
+                        newUsername = baseName + "#" + (1000 + rnd.nextInt(9000));
+                    } while (userRepository.existsByUsername(newUsername));
+                }
+                user.setUsername(newUsername);
+                user = userRepository.save(user);
+            }
         }
-        String password = "guest_" + guestUuid;
 
-        // Create and save guest user
-        User user = User.builder()
-                .username(guestUsername)
-                .password(passwordEncoder.encode(password))
-                .role(UserRole.PLAYER)
-                .build();
-        User savedUser = userRepository.save(user);
+        // Add guest to player sessions if not already in this session
+        boolean alreadyJoined = playerSessionRepository.existsByUserAndGameSession(user, session);
+        if (!alreadyJoined) {
+            PlayerSession playerSession = PlayerSession.builder()
+                    .user(user)
+                    .gameSession(session)
+                    .build();
+            playerSessionRepository.save(playerSession);
+            
+            sseService.broadcast(code, mapToResponse(session));
+            sseService.broadcastSessionsList(getAllSessions());
+        }
 
-        // Add guest to player sessions
-        PlayerSession playerSession = PlayerSession.builder()
-                .user(savedUser)
-                .gameSession(session)
-                .build();
-        playerSessionRepository.save(playerSession);
-
-        sseService.broadcast(code, mapToResponse(session));
-        sseService.broadcastSessionsList(getAllSessions());
-
-        // Generate JWT token using UUID string representation
-        String token = jwtTokenProvider.generateToken(savedUser.getId().toString());
-        return new com.msadley.shellspell.dto.AuthResponse(token, savedUser.getUsername(), savedUser.getRole().name());
+        // Generate JWT token using string representation of ID
+        String token = jwtTokenProvider.generateToken(user.getId(), cleanUsername(user.getUsername()), user.getRole().name());
+        return new com.msadley.shellspell.dto.AuthResponse(token, cleanUsername(user.getUsername()), user.getRole().name());
     }
 
     private String generateSessionCode() {
@@ -259,18 +390,52 @@ public class GameSessionService {
         return sessionCode;
     }
 
+    private String cleanUsername(String username) {
+        if (username == null) return null;
+        int colonIndex = username.indexOf(':');
+        if (colonIndex == 6) { // session code is exactly 6 characters
+            return username.substring(colonIndex + 1);
+        }
+        return username;
+    }
+
+    @Transactional
+    public SessionResponse revealResults(String code, User host) {
+        GameSession session = gameSessionRepository.findBySessionCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
+
+        if (!session.getHostAdmin().getId().equals(host.getId())) {
+            throw new UnauthorizedException("Only the host admin can reveal results for this session");
+        }
+
+        if (session.getStatus() != SessionStatus.FINISHED) {
+            throw new BadRequestException("Session status must be FINISHED to reveal results. Current status: " + session.getStatus());
+        }
+
+        session.setResultsRevealed(true);
+        GameSession savedSession = gameSessionRepository.save(session);
+        SessionResponse response = mapToResponse(savedSession);
+        sseService.broadcast(code, response);
+        sseService.broadcastSessionsList(getAllSessions());
+        return response;
+    }
+
     private SessionResponse mapToResponse(GameSession session) {
         // Fetch all players in this session
         List<PlayerSession> playerSessions = playerSessionRepository.findByGameSessionWithUser(session);
+        String hostUsername = cleanUsername(session.getHostAdmin().getUsername());
         List<String> players = playerSessions.stream()
-                .map(playerSession -> playerSession.getUser().getUsername())
+                .map(playerSession -> cleanUsername(playerSession.getUser().getUsername()))
+                .filter(player -> player != null && 
+                                  !player.equalsIgnoreCase("admin") && 
+                                  !player.equals(hostUsername))
                 .toList();
 
         // Fetch recent spell casts for this session
         List<CastSpell> castSpells = castSpellRepository.findByGameSessionWithUserAndSpell(session);
         List<CastSpellDto> recentCasts = castSpells.stream()
                 .map(castSpell -> new CastSpellDto(
-                        castSpell.getUser().getUsername(),
+                        cleanUsername(castSpell.getUser().getUsername()),
                         castSpell.getSpell().getName(),
                         castSpell.getSpell().getCategory(),
                         castSpell.getSpell().getDamageAmount(),
@@ -278,14 +443,54 @@ public class GameSessionService {
                 ))
                 .toList();
 
+        // Build the ranking
+        java.util.Map<String, Integer> spellsCastMap = new java.util.HashMap<>();
+        java.util.Map<String, Integer> totalDamageMap = new java.util.HashMap<>();
+
+        // Initialize for all players
+        for (String player : players) {
+            spellsCastMap.put(player, 0);
+            totalDamageMap.put(player, 0);
+        }
+
+        // Aggregate counts from castSpells
+        for (CastSpell cs : castSpells) {
+            String player = cleanUsername(cs.getUser().getUsername());
+            if (spellsCastMap.containsKey(player)) {
+                spellsCastMap.put(player, spellsCastMap.get(player) + 1);
+                totalDamageMap.put(player, totalDamageMap.get(player) + cs.getSpell().getDamageAmount());
+            }
+        }
+
+        List<com.msadley.shellspell.dto.WizardScore> ranking = players.stream()
+                .map(player -> new com.msadley.shellspell.dto.WizardScore(
+                        player,
+                        spellsCastMap.get(player),
+                        totalDamageMap.get(player)
+                ))
+                .sorted((a, b) -> {
+                    int compareSpells = Integer.compare(b.spellsCast(), a.spellsCast());
+                    if (compareSpells != 0) {
+                        return compareSpells;
+                    }
+                    int compareDamage = Integer.compare(b.totalDamage(), a.totalDamage());
+                    if (compareDamage != 0) {
+                        return compareDamage;
+                    }
+                    return a.username().compareToIgnoreCase(b.username());
+                })
+                .toList();
+
         return new SessionResponse(
                 session.getSessionCode(),
                 session.getStatus(),
                 session.getCrystalHealth(),
                 session.getMaxCrystalHealth() != null ? session.getMaxCrystalHealth() : session.getCrystalHealth(),
-                session.getHostAdmin().getUsername(),
+                cleanUsername(session.getHostAdmin().getUsername()),
                 players,
-                recentCasts
+                recentCasts,
+                session.isResultsRevealed(),
+                ranking
         );
     }
 }

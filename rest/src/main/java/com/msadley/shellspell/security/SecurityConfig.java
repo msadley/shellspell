@@ -42,6 +42,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/sessions/*/join-guest").permitAll()
+                .requestMatchers("/api/sessions/mock-big-result").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/sessions").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/sessions").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/sessions/stream").hasRole("ADMIN")
@@ -52,8 +53,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/sessions/*/stream").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/sessions/*").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/spells").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/spells").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/spells/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/spells/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/spells/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/api/users/me/password").authenticated()
                 .anyRequest().authenticated()
             )

@@ -29,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         if (!userRepository.existsByUsername("admin")) {
             User admin = User.builder()
+                    .id(java.util.UUID.randomUUID().toString())
                     .username("admin")
                     .password(passwordEncoder.encode("admin"))
                     .role(UserRole.ADMIN)

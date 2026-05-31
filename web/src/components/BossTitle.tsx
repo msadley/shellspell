@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Typography, TypographyProps } from '@mui/joy';
 
 interface BossTitleProps extends TypographyProps {
   isCrystalDefeated: boolean;
 }
 
-export default function BossTitle({ isCrystalDefeated, sx, ...props }: BossTitleProps) {
+function BossTitle({ isCrystalDefeated, sx, ...props }: BossTitleProps) {
   const originalName = "Alma Aprisionada de Xyl'thul";
-  const [bossName, setBossName] = useState(originalName);
+  const titleRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (isCrystalDefeated) {
-      setBossName("CRISTAL DESTRUÍDO");
+      if (titleRef.current) {
+        titleRef.current.textContent = "CRISTAL DESTRUÍDO";
+      }
       return;
+    }
+
+    // Initialize text content on mount
+    if (titleRef.current) {
+      titleRef.current.textContent = originalName;
     }
 
     const glyphs = "!@#$%^&*()_+-=[]{}|;':\",./<>?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -28,7 +35,9 @@ export default function BossTitle({ isCrystalDefeated, sx, ...props }: BossTitle
       if (state === 'glitch') {
         if (now >= cycleEndTime) {
           // Transition to reveal phase (original name is legible)
-          setBossName(originalName);
+          if (titleRef.current) {
+            titleRef.current.textContent = originalName;
+          }
           // Reveal duration: 200ms to 300ms
           const revealDuration = Math.random() * 100 + 200;
           timeoutId = setTimeout(() => {
@@ -48,7 +57,9 @@ export default function BossTitle({ isCrystalDefeated, sx, ...props }: BossTitle
                 : char;
             })
             .join("");
-          setBossName(scrambled);
+          if (titleRef.current) {
+            titleRef.current.textContent = scrambled;
+          }
 
           // Stuttering delay: 20ms to 120ms
           const nextFrameDelay = Math.random() * 100 + 20;
@@ -71,6 +82,7 @@ export default function BossTitle({ isCrystalDefeated, sx, ...props }: BossTitle
 
   return (
     <Typography
+      ref={titleRef}
       level="h3"
       sx={{
         color: isCrystalDefeated ? 'neutral.500' : 'text.primary',
@@ -80,8 +92,9 @@ export default function BossTitle({ isCrystalDefeated, sx, ...props }: BossTitle
         ...sx,
       }}
       {...props}
-    >
-      {bossName}
-    </Typography>
+    />
   );
 }
+
+// Wrap in React.memo to prevent parent re-renders from triggering reconciliation overrides
+export default React.memo(BossTitle);

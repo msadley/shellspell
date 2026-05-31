@@ -22,6 +22,7 @@ export default function Home() {
   
   const navigate = useNavigate();
   const [playerName, setPlayerName] = useState("");
+  const [matricula, setMatricula] = useState("");
   const [sessionCode, setSessionCode] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -34,7 +35,7 @@ export default function Home() {
       setIsRedirecting(true);
       getSession(activeSessionCode)
         .then((session) => {
-          if (session.status === "ACTIVE") {
+          if (session.status === "ACTIVE" || session.status === "FINISHED") {
             navigate(`/battle/${activeSessionCode}`, { replace: true });
           } else {
             navigate(`/lobby/${activeSessionCode}`, { replace: true });
@@ -60,6 +61,14 @@ export default function Home() {
       setErrorMsg("Por favor, insira o seu nome.");
       return;
     }
+    if (!matricula.trim()) {
+      setErrorMsg("Por favor, insira a sua matrícula.");
+      return;
+    }
+    if (matricula.trim().length < 9 || !/^\d+$/.test(matricula.trim())) {
+      setErrorMsg("A matrícula deve ser numérica e conter pelo menos 9 dígitos.");
+      return;
+    }
     if (!sessionCode.trim()) {
       setErrorMsg("Por favor, insira o código da sessão.");
       return;
@@ -68,11 +77,13 @@ export default function Home() {
     try {
       const sessionCodeClean = sessionCode.toUpperCase().trim();
       const trimmedPlayerName = playerName.trim();
+      const matriculaClean = matricula.trim();
 
-      // Check if we already have a saved guest session for this code and name
+      // Check if we already have a saved guest session for this code, name and matricula
       const savedCode = localStorage.getItem("player_sessionCode");
       const savedAlias = localStorage.getItem("player_alias");
-      if (savedCode && savedCode.toUpperCase() === sessionCodeClean && savedAlias === trimmedPlayerName) {
+      const savedMatricula = localStorage.getItem("player_matricula");
+      if (savedCode && savedCode.toUpperCase() === sessionCodeClean && savedAlias === trimmedPlayerName && savedMatricula === matriculaClean) {
         // Restore session state and navigate directly
         const savedToken = localStorage.getItem("player_token");
         const savedUsername = localStorage.getItem("player_username");
@@ -91,6 +102,7 @@ export default function Home() {
       await joinGuestMutation.mutateAsync({
         code: sessionCodeClean,
         displayName: trimmedPlayerName,
+        matricula: matriculaClean,
       });
 
       // Navigate to Lobby using the returned session code
@@ -128,6 +140,24 @@ export default function Home() {
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
                   variant="outlined"
+                />
+              </FormControl>
+
+              <FormControl required>
+                <FormLabel sx={{ color: "neutral.300", fontWeight: 600 }}>
+                  Matrícula
+                </FormLabel>
+                <Input
+                  placeholder="Digite sua matrícula (mínimo 9 dígitos)"
+                  value={matricula}
+                  onChange={(e) => setMatricula(e.target.value)}
+                  variant="outlined"
+                  slotProps={{
+                    input: {
+                      pattern: "\\d{9,}",
+                      title: "A matrícula deve conter pelo menos 9 dígitos e ser somente numérica."
+                    }
+                  }}
                 />
               </FormControl>
 

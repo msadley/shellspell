@@ -26,6 +26,10 @@ public class GameSession {
     @Column(name = "crystal_health", nullable = false)
     private int crystalHealth;
 
+    @Column(name = "results_revealed", nullable = false)
+    @Builder.Default
+    private boolean resultsRevealed = false;
+
     @Column(name = "max_crystal_health")
     private Integer maxCrystalHealth;
 

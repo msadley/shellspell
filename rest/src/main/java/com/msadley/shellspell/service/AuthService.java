@@ -40,6 +40,7 @@ public class AuthService {
     UserRole role = UserRole.PLAYER;
 
     User user = User.builder()
+        .id(java.util.UUID.randomUUID().toString())
         .username(request.username())
         .password(passwordEncoder.encode(request.password()))
         .role(role)
@@ -56,7 +57,7 @@ public class AuthService {
     User user = userRepository.findByUsername(request.username())
         .orElseThrow(() -> new BadRequestException("User not found"));
 
-    String token = jwtTokenProvider.generateToken(user.getId().toString());
+    String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole().name());
     return new AuthResponse(token, user.getUsername(), user.getRole().name());
   }
 }

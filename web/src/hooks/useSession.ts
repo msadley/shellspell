@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/useAuthStore";
 import { sseManager } from "../utils/sseManager";
@@ -11,6 +11,7 @@ import {
   castSpell,
   deleteSession,
   joinGuest,
+  revealResults,
 } from "../api/sessions";
 import { CreateSessionRequest } from "../types";
 
@@ -18,6 +19,8 @@ import { CreateSessionRequest } from "../types";
 export function useSession(code: string | undefined) {
   const queryClient = useQueryClient();
   const username = useAuthStore((state) => state.username);
+  const [isCancelled, setIsCancelled] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   const query = useQuery({
     queryKey: ["session", code],
@@ -28,6 +31,18 @@ export function useSession(code: string | undefined) {
     enabled: !!code,
   });
 
+  // Track if we ever successfully retrieved data
+  if (query.data && !hasLoadedRef.current) {
+    hasLoadedRef.current = true;
+  }
+
+  // Reset cancellation state when code changes
+  useEffect(() => {
+    setIsCancelled(false);
+    hasLoadedRef.current = false;
+  }, [code]);
+
+  // Handle SSE updates and deletions
   useEffect(() => {
     if (!code || !username) return;
 
@@ -37,6 +52,7 @@ export function useSession(code: string | undefined) {
 
     const onDeleted = () => {
       queryClient.setQueryData(["session", code], null);
+      setIsCancelled(true);
     };
 
     const unsubscribe = sseManager.subscribe(code, onUpdate, onDeleted);
@@ -45,7 +61,16 @@ export function useSession(code: string | undefined) {
     };
   }, [code, username, queryClient]);
 
-  return query;
+  // Handle fallback HTTP query failure (404 status indicates deletion/cancellation if it loaded successfully before)
+  const error = query.error as any;
+  const is404 = error && error.response && error.response.status === 404;
+  useEffect(() => {
+    if (is404 && hasLoadedRef.current) {
+      setIsCancelled(true);
+    }
+  }, [is404]);
+
+  return { ...query, isCancelled };
 }
 
 // Single-purpose mutation: Join Session
@@ -65,9 +90,10 @@ export function useJoinSession() {
 export function useJoinGuest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ code, displayName }: { code: string; displayName: string }) => joinGuest(code, displayName),
+    mutationFn: ({ code, displayName, matricula }: { code: string; displayName: string; matricula: string }) => joinGuest(code, displayName, matricula),
     onSuccess: (data, variables) => {
       useAuthStore.getState().setAuth(data.token, data.username, data.role, variables.displayName, variables.code);
+      localStorage.setItem("player_matricula", variables.matricula);
       queryClient.invalidateQueries({
         queryKey: ["session", variables.code],
       });
@@ -159,6 +185,19 @@ export function useDeleteSession() {
     mutationFn: (code: string) => deleteSession(code),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+}
+
+// Reveal session results (ADMIN only)
+export function useRevealResults() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => revealResults(code),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["session", data.sessionCode],
+      });
     },
   });
 }

@@ -18,6 +18,14 @@ export const CastSpellDtoSchema = type({
 
 export type CastSpellDto = typeof CastSpellDtoSchema.infer;
 
+export const WizardScoreSchema = type({
+  username: "string",
+  spellsCast: "number",
+  totalDamage: "number",
+});
+
+export type WizardScore = typeof WizardScoreSchema.infer;
+
 export const SessionResponseSchema = type({
   sessionCode: "string",
   status: SessionStatusSchema,
@@ -26,6 +34,8 @@ export const SessionResponseSchema = type({
   hostAdminUsername: "string",
   players: "string[]",
   recentCasts: CastSpellDtoSchema.array(),
+  resultsRevealed: "boolean",
+  ranking: WizardScoreSchema.array(),
 });
 export type SessionResponse = typeof SessionResponseSchema.infer;
 
@@ -44,5 +54,6 @@ export type CastSpellResponse = typeof CastSpellResponseSchema.infer;
 
 export const JoinGuestRequestSchema = type({
   displayName: "string",
+  matricula: "string",
 });
 export type JoinGuestRequest = typeof JoinGuestRequestSchema.infer;

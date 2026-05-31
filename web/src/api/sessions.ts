@@ -47,7 +47,12 @@ export async function deleteSession(code: string): Promise<void> {
   await client.delete(`/sessions/${code}`);
 }
 
-export async function joinGuest(code: string, displayName: string): Promise<AuthResponse> {
-  const res = await client.post(`/sessions/${code}/join-guest`, { displayName });
+export async function joinGuest(code: string, displayName: string, matricula: string): Promise<AuthResponse> {
+  const res = await client.post(`/sessions/${code}/join-guest`, { displayName, matricula });
   return validateResponse(AuthResponseSchema, res.data, "joinGuest");
+}
+
+export async function revealResults(code: string): Promise<SessionResponse> {
+  const res = await client.patch(`/sessions/${code}/reveal`);
+  return validateResponse(SessionResponseSchema, res.data, "revealResults");
 }

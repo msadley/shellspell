@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Snackbar,
 } from "@mui/joy";
 import { Trash2 } from "lucide-react";
 import {
@@ -31,6 +32,12 @@ export default function SessionListCard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [showAdminCancelModal, setShowAdminCancelModal] = useState(false);
+  const [toastOpen, setToastOpen] = useState(false);
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setToastOpen(true);
+  };
 
   const { data: sessions, isLoading: listLoading, error: listError } =
     useSessions();
@@ -129,7 +136,10 @@ export default function SessionListCard() {
                 >
                   <Typography
                     level="title-sm"
-                    onClick={() => setSelectedCode(session.sessionCode)}
+                    onClick={() => {
+                      setSelectedCode(session.sessionCode);
+                      handleCopyCode(session.sessionCode);
+                    }}
                     sx={{
                       color: "white",
                       fontWeight: 800,
@@ -227,6 +237,16 @@ export default function SessionListCard() {
           </DialogActions>
         </ModalDialog>
       </Modal>
+
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={2000}
+        onClose={() => setToastOpen(false)}
+        color="success"
+        variant="solid"
+      >
+        Código copiado!
+      </Snackbar>
     </Card>
   );
 }

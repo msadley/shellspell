@@ -14,7 +14,7 @@ public interface CastSpellRepository extends JpaRepository<CastSpell, Long> {
 
     List<CastSpell> findByGameSession(GameSession gameSession);
 
-    @org.springframework.data.jpa.repository.Query("SELECT cs FROM CastSpell cs JOIN FETCH cs.user JOIN FETCH cs.spell WHERE cs.gameSession = :gameSession")
+    @org.springframework.data.jpa.repository.Query("SELECT cs FROM CastSpell cs JOIN FETCH cs.user JOIN FETCH cs.spell WHERE cs.gameSession = :gameSession ORDER BY cs.id ASC")
     List<CastSpell> findByGameSessionWithUserAndSpell(@org.springframework.data.repository.query.Param("gameSession") GameSession gameSession);
 
     @Modifying

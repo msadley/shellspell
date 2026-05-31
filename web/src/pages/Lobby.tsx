@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -7,10 +7,8 @@ import {
   Stack,
   Typography,
   CircularProgress,
-  IconButton,
-  Tooltip,
 } from "@mui/joy";
-import { Copy, Check, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { useAuthStore } from "../store/useAuthStore";
 import HomeLayout from "../components/HomeLayout";
@@ -24,36 +22,20 @@ export default function Lobby() {
   const navigate = useNavigate();
 
   const { alias, logout } = useAuthStore();
-  const [copied, setCopied] = useState(false);
 
   const handleLeave = () => {
     logout(code);
     navigate("/");
   };
 
-  const { data: sessionData, isLoading, error } = useSession(code);
-
-  const [isSessionCancelled, setIsSessionCancelled] = useState(false);
-  const sessionExistsRef = useRef(false);
-
-  useEffect(() => {
-    if (sessionData) {
-      sessionExistsRef.current = true;
-    }
-  }, [sessionData]);
-
-  useEffect(() => {
-    if (!isLoading && !sessionData && sessionExistsRef.current) {
-      setIsSessionCancelled(true);
-    }
-  }, [sessionData, isLoading]);
+  const { data: sessionData, isLoading, error, isCancelled } = useSession(code);
 
   const userAlias = alias || "Jogador";
   const currentSession = sessionData;
 
-  // Automatically redirect to battle screen when game session status is ACTIVE
+  // Automatically redirect to battle screen when game session status is ACTIVE or FINISHED
   useEffect(() => {
-    if (currentSession && currentSession.status === "ACTIVE") {
+    if (currentSession && (currentSession.status === "ACTIVE" || currentSession.status === "FINISHED")) {
       navigate(`/battle/${currentSession.sessionCode}`);
     }
   }, [currentSession, navigate]);
@@ -80,21 +62,13 @@ export default function Lobby() {
 
     return (
       <GameErrorOverlay
-        type={isNetworkOrServerError ? "connection" : isSessionCancelled ? "cancelled" : "invalid"}
+        type={isNetworkOrServerError ? "connection" : isCancelled ? "cancelled" : "invalid"}
         sessionCode={code}
         onExit={handleLeave}
         useHomeLayout={isNetworkOrServerError}
       />
     );
   }
-
-  const handleCopyCode = () => {
-    if (code) {
-      navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
 
   return (
@@ -156,19 +130,6 @@ export default function Lobby() {
               >
                 {currentSession.sessionCode}
               </Typography>
-              <Tooltip
-                title={copied ? "Copiado!" : "Copiar Código"}
-                variant="solid"
-              >
-                <IconButton
-                  size="sm"
-                  variant="soft"
-                  color="neutral"
-                  onClick={handleCopyCode}
-                >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                </IconButton>
-              </Tooltip>
             </Stack>
           </Stack>
 

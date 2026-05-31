@@ -37,13 +37,6 @@ export default function VictoryOverlay({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: 'var(--joy-shadow-md)',
-              animation: 'pulse 2s infinite',
-              '@keyframes pulse': {
-                '0%': { transform: 'scale(1)', boxShadow: '0 0 10px var(--joy-palette-success-softBg)' },
-                '50%': { transform: 'scale(1.1)', boxShadow: '0 0 20px var(--joy-palette-success-softBg)' },
-                '100%': { transform: 'scale(1)', boxShadow: '0 0 10px var(--joy-palette-success-softBg)' },
-              }
             }}
           >
             <Award size={48} color="var(--joy-palette-success-solidBg)" />

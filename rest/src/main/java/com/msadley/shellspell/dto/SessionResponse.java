@@ -10,5 +10,7 @@ public record SessionResponse(
     int maxCrystalHealth,
     String hostAdminUsername,
     List<String> players,
-    List<CastSpellDto> recentCasts
+    List<CastSpellDto> recentCasts,
+    boolean resultsRevealed,
+    List<WizardScore> ranking
 ) {}

@@ -46,6 +46,14 @@ public class GameSessionController {
     return ResponseEntity.ok(response);
   }
 
+  @PatchMapping("/{code}/reveal")
+  public ResponseEntity<SessionResponse> revealResults(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @PathVariable String code) {
+    SessionResponse response = gameSessionService.revealResults(code, userDetails.getUser());
+    return ResponseEntity.ok(response);
+  }
+
   @PostMapping("/{code}/join")
   public ResponseEntity<SessionResponse> joinSession(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -59,7 +67,7 @@ public class GameSessionController {
       @PathVariable String code,
       @Valid @RequestBody com.msadley.shellspell.dto.JoinGuestRequest request,
       HttpServletResponse servletResponse) {
-    AuthResponse response = gameSessionService.joinGuest(code, request.displayName());
+    AuthResponse response = gameSessionService.joinGuest(code, request.displayName(), request.matricula());
     CookieUtils.setTokenCookie(servletResponse, response.token());
     return ResponseEntity.ok(response);
   }
@@ -111,6 +119,18 @@ public class GameSessionController {
     return emitter;
   }
 
+  @PostMapping("/mock-big-result")
+  public ResponseEntity<SessionResponse> createMockBigResult() {
+    SessionResponse response = gameSessionService.createMockBigResult();
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/mock-big-result")
+  public ResponseEntity<SessionResponse> createMockBigResultGet() {
+    SessionResponse response = gameSessionService.createMockBigResult();
+    return ResponseEntity.ok(response);
+  }
+
   @GetMapping
   public ResponseEntity<List<SessionResponse>> getAllSessions() {
     List<SessionResponse> response = gameSessionService.getAllSessions();
@@ -118,8 +138,10 @@ public class GameSessionController {
   }
 
   @DeleteMapping("/{code}")
-  public ResponseEntity<Void> deleteSession(@PathVariable String code) {
-    gameSessionService.deleteSession(code);
+  public ResponseEntity<Void> deleteSession(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @PathVariable String code) {
+    gameSessionService.deleteSession(code, userDetails.getUser());
     return ResponseEntity.noContent().build();
   }
 }

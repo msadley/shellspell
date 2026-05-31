@@ -3,9 +3,10 @@ import SpellHistoryEntry, { SpellCast } from './SpellHistoryEntry';
 
 interface SpellHistoryListProps {
   recentCasts?: SpellCast[];
+  showCastBy?: boolean;
 }
 
-export default function SpellHistoryList({ recentCasts = [] }: SpellHistoryListProps) {
+export default function SpellHistoryList({ recentCasts = [], showCastBy = true }: SpellHistoryListProps) {
   const totalCasts = recentCasts.length;
 
   return (
@@ -16,7 +17,7 @@ export default function SpellHistoryList({ recentCasts = [] }: SpellHistoryListP
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      maxWidth: 250,
+      maxWidth: 300,
       width: '100%',
       justifySelf: 'end'
     }}>
@@ -39,14 +40,21 @@ export default function SpellHistoryList({ recentCasts = [] }: SpellHistoryListP
         pb: 2
       }}>
         {totalCasts > 0 ? (
-          recentCasts.slice().reverse().map((cast, index) => {
-            return (
-              <SpellHistoryEntry
-                key={index}
-                cast={cast}
-              />
-            );
-          })
+          [...recentCasts]
+            .sort((a, b) => (a.castAtTime || '').localeCompare(b.castAtTime || ''))
+            .reverse()
+            .map((cast, index) => {
+              const uniqueKey = cast.castAtTime
+                ? `${cast.castAtTime}-${cast.username || ''}-${cast.spellName}`
+                : `${totalCasts - 1 - index}-${cast.spellName}`;
+              return (
+                <SpellHistoryEntry
+                  key={uniqueKey}
+                  cast={cast}
+                  showCastBy={showCastBy}
+                />
+              );
+            })
         ) : (
           <Typography level="body-sm" sx={{ 
             color: 'neutral.500', 

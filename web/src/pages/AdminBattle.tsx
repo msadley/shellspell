@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Snackbar,
 } from "@mui/joy";
 import { AlertCircle, Undo2 } from "lucide-react";
 import { useStartSession, useDeleteSession } from "../hooks/useSession";
@@ -22,6 +23,8 @@ import BattleGridContainer from "../components/battle/BattleGridContainer";
 import SpellHistoryList from "../components/battle/SpellHistoryList";
 import VictoryOverlay from "../components/battle/VictoryOverlay";
 import { useDocumentMetadata } from "../hooks/useDocumentMetadata";
+import SpellEffectsCanvas from "../components/battle/SpellEffectsCanvas";
+import { AdminAnalyticsView } from "../components/battle/EndGameViews";
 
 export default function AdminBattle() {
   const { code } = useParams<{ code: string }>();
@@ -29,6 +32,15 @@ export default function AdminBattle() {
 
   const navigate = useNavigate();
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [toastOpen, setToastOpen] = useState(false);
+
+  const handleCopyCode = () => {
+    if (session?.sessionCode) {
+      navigator.clipboard.writeText(session.sessionCode);
+      setToastOpen(true);
+    }
+  };
 
   const {
     session,
@@ -39,6 +51,26 @@ export default function AdminBattle() {
     recentCasts,
     isCrystalDefeated,
   } = useActiveBattle(code);
+
+  const [animationFinished, setAnimationFinished] = useState(false);
+  const hasBeenActiveRef = useRef(false);
+
+  useEffect(() => {
+    if (session && session.status === "ACTIVE") {
+      hasBeenActiveRef.current = true;
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (isCrystalDefeated) {
+      const timer = setTimeout(() => {
+        setAnimationFinished(true);
+      }, 3000); // 3 seconds for shatter animation to complete
+      return () => clearTimeout(timer);
+    } else {
+      setAnimationFinished(false);
+    }
+  }, [isCrystalDefeated]);
 
   // Count cast spells for each player
   const spellCounts = (session?.recentCasts || []).reduce((acc: Record<string, number>, cast) => {
@@ -162,11 +194,22 @@ export default function AdminBattle() {
       </Box>
     );
   }
-
+  if (session && session.status === 'FINISHED') {
+    // If the crystal has been defeated and we were in an active game, we want to play
+    // the death animation first before showing the analytics view.
+    if (!hasBeenActiveRef.current || animationFinished) {
+      return (
+        <AdminAnalyticsView
+          session={session}
+          onBack={handleBack}
+        />
+      );
+    }
+  }
   return (
     <BattleGridContainer
       sx={{
-        gridTemplateColumns: "minmax(auto, 250px) 1fr minmax(auto, 250px)",
+        gridTemplateColumns: "minmax(auto, 300px) 1fr minmax(auto, 300px)",
         gridTemplateRows: "1fr",
         gridTemplateAreas: `
           "players crystal log"
@@ -186,7 +229,7 @@ export default function AdminBattle() {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          maxWidth: 250,
+          maxWidth: 300,
           width: "100%",
           justifySelf: "start",
         }}
@@ -217,6 +260,7 @@ export default function AdminBattle() {
             return (
               <Sheet
                 key={player}
+                data-player={player}
                 variant="soft"
                 sx={{
                   p: 1.5,
@@ -307,22 +351,14 @@ export default function AdminBattle() {
               size="sm"
               variant="solid"
               color="danger"
-              onClick={async () => {
-                try {
-                  setShowCancelModal(true);
-                  await deleteSessionMutation.mutateAsync(session.sessionCode);
-                } catch (err) {
-                  setShowCancelModal(false);
-                  console.error("Failed to cancel session:", err);
-                }
-              }}
-              loading={deleteSessionMutation.isPending}
+              onClick={() => setShowConfirmModal(true)}
             >
               Cancelar Partida
             </Button>
           ) : null}
           <Typography
             level="title-md"
+            onClick={handleCopyCode}
             sx={{
               position: "absolute",
               left: "50%",
@@ -331,6 +367,10 @@ export default function AdminBattle() {
               color: "neutral.300",
               fontWeight: 700,
               letterSpacing: "0.1em",
+              cursor: "pointer",
+              "&:hover": {
+                color: "white",
+              },
             }}
           >
             {session.sessionCode}
@@ -368,12 +408,60 @@ export default function AdminBattle() {
 
       {/* VICTORY MODAL OVERLAY */}
       <VictoryOverlay
-        showVictory={showVictory}
+        showVictory={showVictory && animationFinished}
         crystalSummary="O Cristal foi completamente destruído pelos conjuradores!"
         summaryLabel="RESUMO DA PARTIDA"
         confirmText="Voltar ao Painel"
         onConfirm={handleBack}
       />
+
+      {/* CANCEL SESSION CONFIRMATION MODAL */}
+      <Modal open={showConfirmModal} onClose={() => setShowConfirmModal(false)}>
+        <ModalDialog variant="outlined" color="danger" sx={{ maxWidth: 400, width: "100%" }}>
+          <DialogTitle>Cancelar Partida</DialogTitle>
+          <DialogContent>
+            Tem certeza que deseja cancelar a partida? Isso irá desconectar todos os jogadores e encerrar a sessão.
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="solid"
+              color="danger"
+              loading={deleteSessionMutation.isPending}
+              onClick={async () => {
+                try {
+                  setShowConfirmModal(false);
+                  setShowCancelModal(true);
+                  await deleteSessionMutation.mutateAsync(session.sessionCode);
+                } catch (err) {
+                  setShowCancelModal(false);
+                  console.error("Failed to cancel session:", err);
+                }
+              }}
+            >
+              Confirmar
+            </Button>
+            <Button
+              variant="plain"
+              color="neutral"
+              onClick={() => setShowConfirmModal(false)}
+            >
+              Cancelar
+            </Button>
+          </DialogActions>
+        </ModalDialog>
+      </Modal>
+
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={2000}
+        onClose={() => setToastOpen(false)}
+        color="success"
+        variant="solid"
+      >
+        Código copiado!
+      </Snackbar>
+
+      <SpellEffectsCanvas recentCasts={recentCasts} isAdmin={true} />
     </BattleGridContainer>
   );
 }

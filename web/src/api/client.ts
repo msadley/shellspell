@@ -9,7 +9,9 @@ const client = axios.create({
 // Request interceptor to attach Bearer token if it exists in localStorage
 client.interceptors.request.use((config) => {
   const token = typeof window !== "undefined"
-    ? localStorage.getItem("active_token")
+    ? (window.location.pathname.startsWith("/admin")
+      ? localStorage.getItem("admin_token")
+      : localStorage.getItem("player_token"))
     : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

@@ -15,13 +15,6 @@ interface AuthState {
 
 const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
 const initialToken = isAdminRoute ? localStorage.getItem('admin_token') : localStorage.getItem('player_token');
-if (typeof window !== 'undefined') {
-  if (initialToken) {
-    localStorage.setItem('active_token', initialToken);
-  } else {
-    localStorage.removeItem('active_token');
-  }
-}
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: initialToken,
@@ -47,7 +40,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.removeItem('player_sessionCode');
       }
     }
-    localStorage.setItem('active_token', token);
     set({ token, username, role, alias, sessionCode });
   },
 
@@ -65,7 +57,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.removeItem('player_alias');
       localStorage.removeItem('player_sessionCode');
     }
-    localStorage.removeItem('active_token');
 
     set({
       token: null,
@@ -89,12 +80,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     const role = isAdmin ? localStorage.getItem('admin_role') : localStorage.getItem('player_role');
     const alias = isAdmin ? localStorage.getItem('admin_alias') : localStorage.getItem('player_alias');
     const sessionCode = isAdmin ? null : localStorage.getItem('player_sessionCode');
-
-    if (token) {
-      localStorage.setItem('active_token', token);
-    } else {
-      localStorage.removeItem('active_token');
-    }
 
     set({ token, username, role, alias, sessionCode });
   },

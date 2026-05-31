@@ -46,13 +46,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         Map<String, String> error = new HashMap<>();
         String message = ex.getMostSpecificCause().getMessage();
-        if (message != null && message.contains("UNIQUE constraint failed")) {
+        boolean isUniqueViolation = message != null && (
+            message.contains("UNIQUE constraint failed") ||
+            message.contains("duplicate key value violates unique constraint") ||
+            message.contains("violates unique constraint")
+        );
+        if (isUniqueViolation) {
             if (message.contains("cast_spells")) {
                 error.put("error", "You have already cast this spell in this session!");
             } else if (message.contains("player_sessions")) {
                 error.put("error", "You have already joined this session!");
             } else {
-                error.put("error", "Unique constraint violation: " + message);
+                error.put("error", "Unique constraint violation occurred.");
             }
         } else {
             error.put("error", "Database integrity violation occurred.");

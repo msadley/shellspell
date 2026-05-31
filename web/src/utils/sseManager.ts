@@ -18,8 +18,9 @@ class SSEManager {
   ) {
     if (!this.connections[code]) {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+      const isAdmin = typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
       const token = typeof window !== "undefined"
-        ? localStorage.getItem("active_token")
+        ? (isAdmin ? localStorage.getItem("admin_token") : localStorage.getItem("player_token"))
         : null;
       const streamPath = code === "all_sessions" ? "/sessions/stream" : `/sessions/${code}/stream`;
       const url = token

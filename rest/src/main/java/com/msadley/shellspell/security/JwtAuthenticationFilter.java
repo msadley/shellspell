@@ -33,14 +33,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                String username = tokenProvider.getUsernameFromJwt(jwt);
+                String id = tokenProvider.getSubjectFromJwt(jwt);
+                String username = tokenProvider.getCustomClaimFromJwt(jwt, "username");
+                String role = tokenProvider.getCustomClaimFromJwt(jwt, "role");
 
-                UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                if (username != null && role != null) {
+                    com.msadley.shellspell.model.User user = com.msadley.shellspell.model.User.builder()
+                            .id(id)
+                            .username(username)
+                            .password("")
+                            .role(com.msadley.shellspell.model.UserRole.valueOf(role))
+                            .build();
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UserDetails userDetails = new CustomUserDetails(user);
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else {
+                    // Fallback to DB lookup if claims are missing (e.g. legacy tokens during migration)
+                    UserDetails userDetails = customUserDetailsService.loadUserByUsername(id);
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         } catch (Exception ex) {
             // Log/suppress authentication error

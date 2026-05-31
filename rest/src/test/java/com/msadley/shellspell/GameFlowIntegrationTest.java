@@ -67,6 +67,7 @@ public class GameFlowIntegrationTest {
     void testCompleteGameFlow() throws Exception {
         // 1. Seed admin user programmatically (since public registration defaults strictly to PLAYER)
         userRepository.save(User.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .username("gameadmin")
                 .password(passwordEncoder.encode("adminpass"))
                 .role(UserRole.ADMIN)
@@ -214,6 +215,7 @@ public class GameFlowIntegrationTest {
     void testJoinGuest() throws Exception {
         // 1. Seed admin user
         userRepository.save(User.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .username("gameadmin2")
                 .password(passwordEncoder.encode("adminpass"))
                 .role(UserRole.ADMIN)
@@ -239,7 +241,7 @@ public class GameFlowIntegrationTest {
         String sessionCode = objectMapper.readValue(createResult.getResponse().getContentAsString(), SessionResponse.class).sessionCode();
 
         // 4. Join as Guest
-        JoinGuestRequest joinGuestRequest = new JoinGuestRequest("GuestPlayer");
+        JoinGuestRequest joinGuestRequest = new JoinGuestRequest("GuestPlayer", "123456789");
         mockMvc.perform(post("/api/sessions/" + sessionCode + "/join-guest")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(joinGuestRequest)))
@@ -253,6 +255,7 @@ public class GameFlowIntegrationTest {
     void testJoinGuestAdminClash() throws Exception {
         // 1. Seed admin user with username "admin"
         User admin = userRepository.save(User.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .username("admin")
                 .password(passwordEncoder.encode("adminpass"))
                 .role(UserRole.ADMIN)
@@ -278,7 +281,7 @@ public class GameFlowIntegrationTest {
         String sessionCode = objectMapper.readValue(createResult.getResponse().getContentAsString(), SessionResponse.class).sessionCode();
 
         // 4. Join as Guest with name "admin" - should append suffix
-        JoinGuestRequest joinGuestRequest = new JoinGuestRequest("admin");
+        JoinGuestRequest joinGuestRequest = new JoinGuestRequest("admin", "987654321");
         mockMvc.perform(post("/api/sessions/" + sessionCode + "/join-guest")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(joinGuestRequest)))
@@ -289,5 +292,71 @@ public class GameFlowIntegrationTest {
         // 5. Verify the admin lookup is still unique
         User retrievedAdmin = userRepository.findByUsername("admin").orElseThrow();
         assertEquals(admin.getId(), retrievedAdmin.getId());
+    }
+
+    @Test
+    void testDeleteSession() throws Exception {
+        // 1. Seed admin user
+        userRepository.save(User.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .username("gameadmin3")
+                .password(passwordEncoder.encode("adminpass"))
+                .role(UserRole.ADMIN)
+                .build());
+
+        // 2. Login as Admin
+        LoginRequest adminLogin = new LoginRequest("gameadmin3", "adminpass");
+        MvcResult adminLoginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(adminLogin)))
+                .andExpect(status().isOk())
+                .andReturn();
+        jakarta.servlet.http.Cookie adminCookie = adminLoginResult.getResponse().getCookie("token");
+
+        // 3. Register player user
+        RegisterRequest playerRegister = new RegisterRequest("player3", "playerpass");
+        mockMvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(playerRegister)))
+                .andExpect(status().isCreated());
+
+        // 4. Login as Player
+        LoginRequest playerLogin = new LoginRequest("player3", "playerpass");
+        MvcResult playerLoginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(playerLogin)))
+                .andExpect(status().isOk())
+                .andReturn();
+        jakarta.servlet.http.Cookie playerCookie = playerLoginResult.getResponse().getCookie("token");
+
+        // 5. Create Session as Admin
+        CreateSessionRequest createRequest = new CreateSessionRequest(50);
+        MvcResult createResult = mockMvc.perform(post("/api/sessions")
+                .cookie(adminCookie)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String sessionCode = objectMapper.readValue(createResult.getResponse().getContentAsString(), SessionResponse.class).sessionCode();
+
+        // 6. Join session as Player
+        mockMvc.perform(post("/api/sessions/" + sessionCode + "/join")
+                .cookie(playerCookie))
+                .andExpect(status().isOk());
+
+        // 7. Try to delete session as Player - should fail with 403 Forbidden
+        mockMvc.perform(delete("/api/sessions/" + sessionCode)
+                .cookie(playerCookie))
+                .andExpect(status().isForbidden());
+
+        // 8. Delete session as Admin - should succeed with 204 No Content
+        mockMvc.perform(delete("/api/sessions/" + sessionCode)
+                .cookie(adminCookie))
+                .andExpect(status().isNoContent());
+
+        // 9. Verify session is deleted for Player (GET returns 404)
+        mockMvc.perform(get("/api/sessions/" + sessionCode)
+                .cookie(playerCookie))
+                .andExpect(status().isNotFound());
     }
 }

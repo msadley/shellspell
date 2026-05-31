@@ -21,11 +21,14 @@ public class UserService {
 
     @Transactional
     public void changePassword(User user, ChangePasswordRequest request) {
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+        User dbUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), dbUser.getPassword())) {
             throw new BadRequestException("Current password does not match");
         }
 
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
+        dbUser.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(dbUser);
     }
 }
