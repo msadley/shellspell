@@ -1,17 +1,13 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
-
-namespace: shellspell
-
-resources:
-  - namespace.yaml
-  - secret.yaml
-  - configmap.yaml
-  - db-service.yaml
-  - db-statefulset.yaml
-  - backend-service.yaml
-  - backend-deployment.yaml
-  - frontend-nginx-config.yaml
-  - frontend-service.yaml
-  - frontend-deployment.yaml
-  - ingress.yaml
+metadata:
+  name: shellspell
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./k8s/manifests
+  prune: true
+  targetNamespace: shellspell
+  sourceRef:
+    kind: GitRepository
+    name: shellspell
