@@ -1,12 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Box, Button, Card, Stack, CircularProgress, Input, Typography, Snackbar
+  Box, Stack, CircularProgress, Snackbar
 } from '@mui/joy';
-import { keyframes } from '@emotion/react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useActiveBattle } from '../hooks/useActiveBattle';
-import { useSpellCaster } from '../hooks/useSpellCaster';
 import BattleGridContainer from '../components/battle/BattleGridContainer';
 import SpellHistoryList from '../components/battle/SpellHistoryList';
 import VictoryOverlay from '../components/battle/VictoryOverlay';
@@ -15,12 +13,7 @@ import GameErrorOverlay from '../components/battle/GameErrorOverlay';
 import { useDocumentMetadata } from '../hooks/useDocumentMetadata';
 import SpellEffectsCanvas from '../components/battle/SpellEffectsCanvas';
 import { PlayerWaitingRoom, WizardRankingResults } from '../components/battle/EndGameViews';
-
-const shakeAnimation = keyframes`
-  0%, 100% { transform: translateX(0); }
-  15%, 45%, 75% { transform: translateX(-4px); }
-  30%, 60%, 90% { transform: translateX(4px); }
-`;
+import SimulatedTerminal from '../components/terminal/SimulatedTerminal';
 
 export default function PlayerBattle() {
   const { code } = useParams<{ code: string }>();
@@ -61,34 +54,9 @@ export default function PlayerBattle() {
     }
   }, [isCrystalDefeated]);
 
-  const {
-    spellInput,
-    setSpellInput,
-    feedback,
-    isPending,
-    castSpell,
-  } = useSpellCaster(session?.sessionCode, () => setShowVictory(true));
-
-  const [isShaking, setIsShaking] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-
-  useEffect(() => {
-    if (feedback) {
-      if (!feedback.success) {
-        const isSpellNotFound = feedback.text.toLowerCase().includes("spell not found");
-        if (isSpellNotFound) {
-          setIsShaking(true);
-          const timer = setTimeout(() => setIsShaking(false), 300);
-          return () => clearTimeout(timer);
-        } else {
-          setToastMessage(feedback.text);
-          setToastOpen(true);
-        }
-      }
-    }
-  }, [feedback]);
-
+  const [isTerminalMaximized, setIsTerminalMaximized] = useState(false);
 
   // Redirect players to lobby if session is WAITING
   useEffect(() => {
@@ -149,35 +117,50 @@ export default function PlayerBattle() {
   return (
     <BattleGridContainer
       sx={{
-        gridTemplateColumns: '1fr minmax(auto, 300px)',
-        gridTemplateRows: '1fr auto',
-        gridTemplateAreas: `
-          "crystal log"
-          "input log"
-        `,
+        gridTemplateColumns: { xs: '1fr', md: '1fr minmax(auto, 300px)' },
+        gridTemplateRows: isTerminalMaximized
+          ? '1fr'
+          : { xs: '1fr minmax(140px, 180px)', md: '1fr minmax(160px, 200px)' },
+        gridTemplateAreas: isTerminalMaximized
+          ? {
+              xs: '"input"',
+              md: '"input log"',
+            }
+          : {
+              xs: `
+                "crystal"
+                "input"
+              `,
+              md: `
+                "crystal log"
+                "input log"
+              `,
+            },
         gap: 2,
       }}
     >
-      {/* CRYSTAL COLUMN - Center */}
-      <Stack 
-        spacing={3} 
-        alignItems="stretch" 
-        justifyContent="flex-start"
-        sx={{
-          gridArea: 'crystal',
-          p: 2,
-          position: 'relative'
-        }}
-      >
-        <CrystalDisplay
-          crystalHealth={session.crystalHealth}
-          maxHealth={maxHealth || session.crystalHealth}
-          isCrystalDefeated={isCrystalDefeated}
-          layout="title-top"
-          titleAlign="left"
-          maxCrystalHeight={{ xs: '40vh', md: '55vh' }}
-        />
-      </Stack>
+      {/* CRYSTAL COLUMN - Center (hidden when terminal is maximized) */}
+      {!isTerminalMaximized && (
+        <Stack 
+          spacing={2} 
+          alignItems="stretch" 
+          justifyContent="flex-start"
+          sx={{
+            gridArea: 'crystal',
+            p: { xs: 1, md: 2 },
+            position: 'relative'
+          }}
+        >
+          <CrystalDisplay
+            crystalHealth={session.crystalHealth}
+            maxHealth={maxHealth || session.crystalHealth}
+            isCrystalDefeated={isCrystalDefeated}
+            layout="title-top"
+            titleAlign="left"
+            maxCrystalHeight={{ xs: '26vh', md: '40vh' }}
+          />
+        </Stack>
+      )}
 
       {/* SPELL LOG COLUMN - Right side */}
       <SpellHistoryList 
@@ -185,63 +168,21 @@ export default function PlayerBattle() {
         showCastBy={false}
       />
 
-      {/* PLAYER INPUT - Bottom center-left */}
-      <Card variant="outlined" sx={{
-        gridArea: 'input',
-        p: 2,
-        borderRadius: 'lg',
-      }}>
-        <form onSubmit={castSpell} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-          <Input
-            placeholder={isCrystalDefeated ? "Cristal destruído!" : "Digite o nome da magia..."}
-            value={spellInput}
-            onChange={(e) => setSpellInput(e.target.value)}
-            disabled={isCrystalDefeated || isPending}
-            startDecorator={
-              <Typography
-                sx={{
-                  color: 'rgb(168, 85, 247)',
-                  fontWeight: 'bold',
-                  mr: 0.5,
-                  userSelect: 'none'
-                }}
-              >
-                ❯
-              </Typography>
-            }
-            sx={{ 
-              flexGrow: 1,
-              borderColor: 'rgba(255, 255, 255, 0.15)',
-              '&::before': {
-                display: 'none !important',
-              },
-              '&:focus-within': {
-                borderColor: 'rgba(255, 255, 255, 0.3) !important',
-                boxShadow: 'none !important',
-              },
-              '&:hover': {
-                borderColor: 'rgba(255, 255, 255, 0.25)',
-              },
-              ...(isShaking && {
-                animation: `${shakeAnimation} 0.3s ease-in-out`,
-                borderColor: 'danger.500 !important',
-                '&:hover': {
-                  borderColor: 'danger.500 !important',
-                }
-              })
-            }}
-          />
-          <Button
-            type="submit"
-            variant="solid"
-            color="primary"
-            disabled={isCrystalDefeated || isPending}
-            loading={isPending}
-          >
-            Conjurar
-          </Button>
-        </form>
-      </Card>
+      {/* SIMULATED TERMINAL - Bottom center-left (takes full space when maximized) */}
+      <SimulatedTerminal
+        sessionCode={session?.sessionCode}
+        username={username}
+        isCrystalDefeated={isCrystalDefeated}
+        onVictory={() => setShowVictory(true)}
+        isMaximized={isTerminalMaximized}
+        onToggleMaximize={() => setIsTerminalMaximized((prev) => !prev)}
+        onFeedback={(fb) => {
+          if (!fb.success) {
+            setToastMessage(fb.text);
+            setToastOpen(true);
+          }
+        }}
+      />
 
       {/* VICTORY MODAL OVERLAY */}
       <VictoryOverlay

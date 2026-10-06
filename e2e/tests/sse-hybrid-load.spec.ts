@@ -313,7 +313,7 @@ test.describe('Hybrid Load Test: 50 Concurrent Sessions & SSE Propagation', () =
     // 5 real browsers type and cast "Bola de Fogo"
     const realCastPromises = playerPages.map(async (page, idx) => {
       const input = page.locator('input[placeholder="Digite o nome da magia..."]');
-      await input.fill('Bola de Fogo');
+      await input.fill('cast "Bola de Fogo"');
       await page.click('button:has-text("Conjurar")');
     });
 

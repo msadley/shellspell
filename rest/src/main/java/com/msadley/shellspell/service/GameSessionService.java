@@ -214,7 +214,30 @@ public class GameSessionService {
                 Spell.builder().name("Dreno de Vida").damageAmount(25).category("umbral").build(),
                 Spell.builder().name("Seta Sombria").damageAmount(20).category("umbral").build(),
                 Spell.builder().name("Chama Negra").damageAmount(35).category("umbral").build(),
-                Spell.builder().name("Pesadelo").damageAmount(30).category("umbral").build()
+                Spell.builder().name("Pesadelo").damageAmount(30).category("umbral").build(),
+
+                // Spells dos Arquivos (VFS)
+                Spell.builder().name("Umbra Flagellum").damageAmount(15).category("umbral").build(),
+                Spell.builder().name("Noctis Morsus").damageAmount(20).category("umbral").build(),
+                Spell.builder().name("Caligo Tenebrarum").damageAmount(20).category("umbral").build(),
+                Spell.builder().name("Inanis Sectum").damageAmount(40).category("umbral").build(),
+                Spell.builder().name("Chaos Involucrum").damageAmount(50).category("arcano").build(),
+                Spell.builder().name("Carcer Angularis").damageAmount(15).category("runico").build(),
+                Spell.builder().name("Sigillum Ponderis").damageAmount(15).category("runico").build(),
+                Spell.builder().name("Glyphos Dementiae").damageAmount(20).category("runico").build(),
+                Spell.builder().name("Maledictio Scripta").damageAmount(35).category("runico").build(),
+                Spell.builder().name("Stigma Ignotum").damageAmount(50).category("runico").build(),
+                Spell.builder().name("Sporae Profundae").damageAmount(30).category("primal").build(),
+                Spell.builder().name("Visceralis Diruptio").damageAmount(25).category("primal").build(),
+                Spell.builder().name("Ossea Eruptio").damageAmount(25).category("primal").build(),
+                Spell.builder().name("Spiritus Gelidus").damageAmount(15).category("etereo").build(),
+                Spell.builder().name("Spectra Ululatus").damageAmount(20).category("etereo").build(),
+                Spell.builder().name("Corpus Evanesco").damageAmount(35).category("etereo").build(),
+                Spell.builder().name("Umbra Astralis").damageAmount(45).category("etereo").build(),
+                Spell.builder().name("Stella Cadens").damageAmount(20).category("etereo").build(),
+                Spell.builder().name("Ignis Coloris").damageAmount(20).category("primal").build(),
+                Spell.builder().name("Lumen Abyssale").damageAmount(30).category("arcano").build(),
+                Spell.builder().name("Arcana Mutatio").damageAmount(55).category("arcano").build()
             );
             spellRepository.saveAll(defaultSpells);
         }
