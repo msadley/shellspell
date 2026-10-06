@@ -9,15 +9,21 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:shellspell}
     password: ${SPRING_DATASOURCE_PASSWORD:shellspell}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 35
+      minimum-idle: 10
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
   jpa:
     open-in-view: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
 app:
   jwt:
@@ -26,6 +32,6 @@ app:
 
 logging:
   level:
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: INFO
 

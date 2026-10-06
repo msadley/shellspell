@@ -54,14 +54,17 @@ public class SseService {
     }
 
     public SseEmitter register(String code) {
-        // Emitter timeout set to 3 minutes
-        SseEmitter emitter = new SseEmitter(180_000L);
+        // Emitter timeout set to 1 hour (3,600,000 ms) instead of 3 minutes; heartbeats keep it alive
+        SseEmitter emitter = new SseEmitter(3_600_000L);
         SafeSseEmitter safeEmitter = new SafeSseEmitter(emitter);
 
         emittersMap.computeIfAbsent(code, k -> new CopyOnWriteArrayList<>()).add(safeEmitter);
 
         emitter.onCompletion(() -> removeEmitter(code, safeEmitter));
-        emitter.onTimeout(() -> removeEmitter(code, safeEmitter));
+        emitter.onTimeout(() -> {
+            safeEmitter.complete();
+            removeEmitter(code, safeEmitter);
+        });
         emitter.onError((ex) -> removeEmitter(code, safeEmitter));
 
         return emitter;

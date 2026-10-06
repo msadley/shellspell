@@ -37,3 +37,4 @@ build/
 shellspell.db
 shellspell.db-journal
 
+.env

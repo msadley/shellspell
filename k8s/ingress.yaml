@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shellspell-ingress
+  namespace: shellspell
+  labels:
+    app.kubernetes.io/name: shellspell-ingress
+    app.kubernetes.io/part-of: shellspell
+  annotations:
+    # cert-manager cluster issuer configuration (Let's Encrypt Production)
+    cert-manager.io/cluster-issuer: letsencrypt-prod-cluster-issuer
+    
+    # Traefik ingress controller entrypoints
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    
+    # NGINX Ingress annotations (if running NGINX Ingress Controller)
+    # kubernetes.io/ingress.class: "traefik"
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - shellspell.ygg.dedyn.io
+      secretName: shellspell-tls
+  rules:
+    - host: shellspell.ygg.dedyn.io
+      http:
+        paths:
+          # API endpoints route directly to the backend load balancer
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: shellspell-backend
+                port:
+                  number: 8080
+          # Frontend web UI route
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: shellspell-frontend
+                port:
+                  number: 80

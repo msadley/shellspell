@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shellspell-config
+  namespace: shellspell
+  labels:
+    app.kubernetes.io/name: shellspell
+    app.kubernetes.io/part-of: shellspell
+data:
+  # Database configuration
+  POSTGRES_DB: "shellspell"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://shellspell-db:5432/shellspell"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  # JWT token expiration (24h in milliseconds)
+  JWT_EXPIRATION_MS: "86400000"

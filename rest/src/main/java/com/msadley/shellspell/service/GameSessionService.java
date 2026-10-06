@@ -318,12 +318,14 @@ public class GameSessionService {
         GameSession session = gameSessionRepository.findBySessionCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Game session not found with code: " + code));
 
-        if (session.getStatus() != SessionStatus.WAITING && !"MOCK80".equals(code)) {
+        // Check if user with this matricula already exists and is a participant in this session
+        User user = userRepository.findById(matricula).orElse(null);
+        boolean alreadyJoined = user != null && playerSessionRepository.existsByUserAndGameSession(user, session);
+
+        if (!alreadyJoined && session.getStatus() != SessionStatus.WAITING && !"MOCK80".equals(code)) {
             throw new BadRequestException("You can only join sessions that are in WAITING status");
         }
 
-        // Check if user with this matricula already exists
-        User user = userRepository.findById(matricula).orElse(null);
         if (user == null) {
             String guestUsername = code + ":" + displayName.trim();
             if (displayName.trim().equalsIgnoreCase("admin") || userRepository.existsByUsername(guestUsername)) {
@@ -341,7 +343,18 @@ public class GameSessionService {
                     .password("guest")
                     .role(UserRole.PLAYER)
                     .build();
-            user = userRepository.save(user);
+            try {
+                user = userRepository.saveAndFlush(user);
+            } catch (org.springframework.dao.DataIntegrityViolationException dive) {
+                // If a concurrent thread took the username or user id, resolve with random suffix
+                User existingById = userRepository.findById(matricula).orElse(null);
+                if (existingById != null) {
+                    user = existingById;
+                } else {
+                    user.setUsername(code + ":" + displayName.trim() + "#" + (1000 + new java.util.Random().nextInt(9000)));
+                    user = userRepository.saveAndFlush(user);
+                }
+            }
         } else {
             String newUsername = code + ":" + displayName.trim();
             if (!user.getUsername().equals(newUsername)) {
@@ -353,21 +366,29 @@ public class GameSessionService {
                     } while (userRepository.existsByUsername(newUsername));
                 }
                 user.setUsername(newUsername);
-                user = userRepository.save(user);
+                try {
+                    user = userRepository.saveAndFlush(user);
+                } catch (org.springframework.dao.DataIntegrityViolationException dive) {
+                    user.setUsername(code + ":" + displayName.trim() + "#" + (1000 + new java.util.Random().nextInt(9000)));
+                    user = userRepository.saveAndFlush(user);
+                }
             }
         }
 
         // Add guest to player sessions if not already in this session
-        boolean alreadyJoined = playerSessionRepository.existsByUserAndGameSession(user, session);
+        alreadyJoined = playerSessionRepository.existsByUserAndGameSession(user, session);
         if (!alreadyJoined) {
             PlayerSession playerSession = PlayerSession.builder()
                     .user(user)
                     .gameSession(session)
                     .build();
-            playerSessionRepository.save(playerSession);
+            try {
+                playerSessionRepository.saveAndFlush(playerSession);
+            } catch (org.springframework.dao.DataIntegrityViolationException dive) {
+                // Handled if joined concurrently
+            }
             
             sseService.broadcast(code, mapToResponse(session));
-            sseService.broadcastSessionsList(getAllSessions());
         }
 
         // Generate JWT token using string representation of ID

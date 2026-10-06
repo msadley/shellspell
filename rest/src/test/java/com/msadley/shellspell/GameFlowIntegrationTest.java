@@ -50,6 +50,9 @@ public class GameFlowIntegrationTest {
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private com.msadley.shellspell.service.DataInitializer dataInitializer;
+
     @BeforeEach
     void setUp() {
         castSpellRepository.deleteAll();
@@ -358,5 +361,124 @@ public class GameFlowIntegrationTest {
         mockMvc.perform(get("/api/sessions/" + sessionCode)
                 .cookie(playerCookie))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testDefaultSpellsSeededOnStartup() throws Exception {
+        spellRepository.deleteAll();
+        assertEquals(0, spellRepository.count());
+
+        dataInitializer.run();
+
+        assertTrue(spellRepository.count() >= 20);
+        assertTrue(spellRepository.existsByNameIgnoreCase("Bola de Fogo"));
+        assertTrue(spellRepository.existsByNameIgnoreCase("Míssil Mágico"));
+        assertTrue(spellRepository.existsByNameIgnoreCase("Projeção Astral"));
+    }
+
+    @Test
+    void testGuestRejoinActiveSession() throws Exception {
+        // 1. Seed admin
+        userRepository.save(User.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .username("rejoinadmin")
+                .password(passwordEncoder.encode("adminpass"))
+                .role(UserRole.ADMIN)
+                .build());
+
+        LoginRequest adminLogin = new LoginRequest("rejoinadmin", "adminpass");
+        MvcResult adminLoginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(adminLogin)))
+                .andExpect(status().isOk())
+                .andReturn();
+        jakarta.servlet.http.Cookie adminCookie = adminLoginResult.getResponse().getCookie("token");
+
+        // 2. Admin creates session
+        CreateSessionRequest createRequest = new CreateSessionRequest(100);
+        MvcResult createResult = mockMvc.perform(post("/api/sessions")
+                .cookie(adminCookie)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String sessionCode = objectMapper.readValue(createResult.getResponse().getContentAsString(), SessionResponse.class).sessionCode();
+
+        // 3. Guest joins while WAITING
+        JoinGuestRequest joinReq = new JoinGuestRequest("Lucas", "111222333");
+        mockMvc.perform(post("/api/sessions/" + sessionCode + "/join-guest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(joinReq)))
+                .andExpect(status().isOk());
+
+        // 4. Admin starts the session -> status ACTIVE
+        mockMvc.perform(patch("/api/sessions/" + sessionCode + "/start")
+                .cookie(adminCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("ACTIVE")));
+
+        // 5. Existing guest re-joins (e.g. browser refresh / closed tab) -> should SUCCEED
+        mockMvc.perform(post("/api/sessions/" + sessionCode + "/join-guest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(joinReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("Lucas")))
+                .andExpect(cookie().exists("token"));
+
+        // 6. A brand-new guest trying to join ACTIVE session -> should FAIL with 400
+        JoinGuestRequest newGuest = new JoinGuestRequest("LatePlayer", "999888777");
+        mockMvc.perform(post("/api/sessions/" + sessionCode + "/join-guest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(newGuest)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testConcurrentGuestJoinSameName() throws Exception {
+        // 1. Seed admin
+        userRepository.save(User.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .username("nameadmin")
+                .password(passwordEncoder.encode("adminpass"))
+                .role(UserRole.ADMIN)
+                .build());
+
+        LoginRequest adminLogin = new LoginRequest("nameadmin", "adminpass");
+        MvcResult adminLoginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(adminLogin)))
+                .andExpect(status().isOk())
+                .andReturn();
+        jakarta.servlet.http.Cookie adminCookie = adminLoginResult.getResponse().getCookie("token");
+
+        // 2. Admin creates session
+        CreateSessionRequest createRequest = new CreateSessionRequest(100);
+        MvcResult createResult = mockMvc.perform(post("/api/sessions")
+                .cookie(adminCookie)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String sessionCode = objectMapper.readValue(createResult.getResponse().getContentAsString(), SessionResponse.class).sessionCode();
+
+        // 3. Two different students with same display name "Lucas"
+        JoinGuestRequest student1 = new JoinGuestRequest("Lucas", "123123123");
+        JoinGuestRequest student2 = new JoinGuestRequest("Lucas", "456456456");
+
+        mockMvc.perform(post("/api/sessions/" + sessionCode + "/join-guest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(student1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("Lucas")));
+
+        mockMvc.perform(post("/api/sessions/" + sessionCode + "/join-guest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(student2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", startsWith("Lucas#")));
+
+        // 4. Verify both are registered in player sessions for this game session
+        GameSession session = gameSessionRepository.findBySessionCode(sessionCode).orElseThrow();
+        assertEquals(2, playerSessionRepository.findByGameSession(session).size());
     }
 }

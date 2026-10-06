@@ -132,7 +132,6 @@ export function useStartSession() {
 
 // Cast Spell mutation
 export function useCastSpell() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       code,
@@ -141,9 +140,6 @@ export function useCastSpell() {
       code: string;
       spellName: string;
     }) => castSpell(code, spellName),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["session", variables.code] });
-    },
   });
 }
 
