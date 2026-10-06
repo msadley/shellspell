@@ -120,7 +120,7 @@ export default function PlayerBattle() {
         gridTemplateColumns: { xs: '1fr', md: '1fr minmax(auto, 300px)' },
         gridTemplateRows: isTerminalMaximized
           ? '1fr'
-          : { xs: 'auto 1fr', md: 'auto 1fr' },
+          : { xs: '3fr 2fr', md: '3fr 2fr' },
         gridTemplateAreas: isTerminalMaximized
           ? {
               xs: '"input"',
@@ -163,7 +163,7 @@ export default function PlayerBattle() {
             isCrystalDefeated={isCrystalDefeated}
             layout="title-top"
             titleAlign="left"
-            maxCrystalHeight={{ xs: '18vh', md: '22vh' }}
+            maxCrystalHeight={{ xs: '28vh', md: '36vh' }}
           />
         </Stack>
       )}

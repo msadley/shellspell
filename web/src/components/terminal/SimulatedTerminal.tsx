@@ -316,8 +316,20 @@ export default function SimulatedTerminal({
 
   const renderLineContent = (line: TerminalOutputLine) => {
     if (line.type === 'prompt') {
+      const path = line.promptInfo?.cwd || displayPath;
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <Typography
+            sx={{
+              color: '#38bdf8',
+              fontWeight: 600,
+              fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+              fontSize: '0.85rem',
+              lineHeight: 1,
+            }}
+          >
+            {path}
+          </Typography>
           <Typography sx={{ color: '#a855f7', fontWeight: 800, fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace", fontSize: '0.9rem', lineHeight: 1 }}>
             &gt;
           </Typography>
@@ -496,6 +508,21 @@ export default function SimulatedTerminal({
             width: '100%',
           }}
         >
+          {/* Current directory in prompt */}
+          <Typography
+            sx={{
+              color: '#38bdf8',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+              userSelect: 'none',
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            {displayPath}
+          </Typography>
+
           {/* Prompt prefix: ">" */}
           <Typography
             sx={{
