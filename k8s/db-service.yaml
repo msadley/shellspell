@@ -3,10 +3,6 @@ kind: Service
 metadata:
   name: shellspell-db
   namespace: shellspell
-  labels:
-    app.kubernetes.io/name: shellspell-db
-    app.kubernetes.io/component: database
-    app.kubernetes.io/part-of: shellspell
 spec:
   type: ClusterIP
   selector:

@@ -3,17 +3,14 @@ kind: Ingress
 metadata:
   name: shellspell-ingress
   namespace: shellspell
-  labels:
-    app.kubernetes.io/name: shellspell-ingress
-    app.kubernetes.io/part-of: shellspell
   annotations:
     # cert-manager cluster issuer configuration (Let's Encrypt Production)
     cert-manager.io/cluster-issuer: letsencrypt-prod-cluster-issuer
-    
+
     # Traefik ingress controller entrypoints
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
-    
+
     # NGINX Ingress annotations (if running NGINX Ingress Controller)
     # kubernetes.io/ingress.class: "traefik"
     # nginx.ingress.kubernetes.io/ssl-redirect: "true"

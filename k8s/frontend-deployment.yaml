@@ -3,10 +3,6 @@ kind: Deployment
 metadata:
   name: shellspell-frontend
   namespace: shellspell
-  labels:
-    app.kubernetes.io/name: shellspell-frontend
-    app.kubernetes.io/component: frontend
-    app.kubernetes.io/part-of: shellspell
 spec:
   replicas: 2
   selector:

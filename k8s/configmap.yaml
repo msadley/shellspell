@@ -3,9 +3,6 @@ kind: ConfigMap
 metadata:
   name: shellspell-config
   namespace: shellspell
-  labels:
-    app.kubernetes.io/name: shellspell
-    app.kubernetes.io/part-of: shellspell
 data:
   # Database configuration
   POSTGRES_DB: "shellspell"

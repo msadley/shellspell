@@ -3,10 +3,6 @@ kind: Service
 metadata:
   name: shellspell-backend
   namespace: shellspell
-  labels:
-    app.kubernetes.io/name: shellspell-backend
-    app.kubernetes.io/component: backend
-    app.kubernetes.io/part-of: shellspell
 spec:
   type: ClusterIP
   sessionAffinity: None

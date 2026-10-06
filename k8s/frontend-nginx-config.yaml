@@ -3,10 +3,6 @@ kind: ConfigMap
 metadata:
   name: shellspell-frontend-nginx
   namespace: shellspell
-  labels:
-    app.kubernetes.io/name: shellspell-frontend
-    app.kubernetes.io/component: frontend
-    app.kubernetes.io/part-of: shellspell
 data:
   default.conf: |
     server {

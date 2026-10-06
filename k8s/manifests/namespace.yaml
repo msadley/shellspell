@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: shellspell
-  labels:
-    app.kubernetes.io/name: shellspell
-    app.kubernetes.io/part-of: shellspell
