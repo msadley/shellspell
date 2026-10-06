@@ -1,5 +1,5 @@
 # Stage 1: Development stage
-FROM maven:3.9.6-eclipse-temurin-21-alpine AS development
+FROM --platform=$BUILDPLATFORM maven:3.9.6-eclipse-temurin-21-alpine AS development
 WORKDIR /app
 
 # Copy the pom.xml and dependencies definition

@@ -1,5 +1,5 @@
 # Stage 1: Development environment
-FROM node:20-alpine AS development
+FROM --platform=$BUILDPLATFORM node:20-alpine AS development
 WORKDIR /app
 
 # Copy dependency files and install packages
@@ -19,6 +19,9 @@ RUN npm run build
 
 # Stage 3: Serve the built application with Nginx (Production)
 FROM nginx:alpine AS production
+
+# Copy ssl certificates
+COPY ssl /etc/nginx/ssl
 
 # Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf

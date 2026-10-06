@@ -19,9 +19,12 @@ spec:
       labels:
         app: backend
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: backend
-          image: shellspell-backend:latest
+          image: ghcr.io/msadley/shellspell-backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
@@ -87,9 +90,12 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: frontend
-          image: shellspell-frontend:latest
+          image: ghcr.io/msadley/shellspell-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           volumeMounts:
