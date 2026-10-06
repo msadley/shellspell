@@ -318,10 +318,10 @@ export default function SimulatedTerminal({
     if (line.type === 'prompt') {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <Typography sx={{ color: '#a855f7', fontWeight: 800, fontFamily: 'monospace', fontSize: '0.9rem' }}>
+          <Typography sx={{ color: '#a855f7', fontWeight: 800, fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace", fontSize: '0.9rem', lineHeight: 1 }}>
             &gt;
           </Typography>
-          <Typography sx={{ color: '#f8fafc', fontWeight: 500, fontFamily: 'monospace', fontSize: '0.85rem' }}>
+          <Typography sx={{ color: '#f8fafc', fontWeight: 500, fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace", fontSize: '0.85rem' }}>
             {line.text}
           </Typography>
         </Box>
@@ -381,7 +381,7 @@ export default function SimulatedTerminal({
         gridArea: 'input',
         p: 0,
         height: '100%',
-        minHeight: '260px',
+        minHeight: 0,
         maxHeight: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -408,6 +408,7 @@ export default function SimulatedTerminal({
           alignItems: 'center',
           justifyContent: 'space-between',
           userSelect: 'none',
+          flexShrink: 0,
         }}
       >
         <Typography
@@ -451,17 +452,19 @@ export default function SimulatedTerminal({
         )}
       </Box>
 
-      {/* TERMINAL OUTPUT BUFFER */}
+      {/* TERMINAL OUTPUT & INLINE PROMPT BUFFER */}
       <Box
         ref={terminalScrollRef}
         sx={{
           flex: 1,
+          minHeight: 0,
           p: 1.5,
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
           gap: 0.4,
           fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+          cursor: 'text',
           '&::-webkit-scrollbar': {
             width: '6px',
           },
@@ -480,78 +483,91 @@ export default function SimulatedTerminal({
         {outputLines.map((line) => (
           <Box key={line.id}>{renderLineContent(line)}</Box>
         ))}
-      </Box>
 
-      {/* PROMPT INPUT LINE */}
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{
-          px: 1.5,
-          py: 1,
-          bgcolor: 'rgba(15, 18, 28, 0.98)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-        }}
-      >
-        {/* Prompt Label: ">" */}
+        {/* ACTIVE PROMPT INPUT LINE - Directly on the next line */}
         <Box
+          component="form"
+          onSubmit={handleSubmit}
           sx={{
             display: 'flex',
             alignItems: 'center',
-            userSelect: 'none',
-            flexShrink: 0,
-            pl: 0.5,
+            gap: 0.75,
+            mt: 0.25,
+            width: '100%',
           }}
         >
+          {/* Prompt prefix: ">" */}
           <Typography
             sx={{
               color: '#a855f7',
               fontWeight: 800,
-              fontSize: '1rem',
-              fontFamily: 'monospace',
+              fontSize: '0.9rem',
+              fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+              userSelect: 'none',
+              lineHeight: 1,
+              flexShrink: 0,
             }}
           >
             &gt;
           </Typography>
-        </Box>
 
-        {/* Command Input Field */}
-        <Input
-          slotProps={{
-            input: {
-              ref: inputRef,
-            },
-          }}
-          placeholder={isCrystalDefeated ? 'Cristal destruído!' : ''}
-          value={currentInput}
-          onChange={(e) => setCurrentInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isCrystalDefeated || castSpellMutation.isPending}
-          variant="plain"
-          size="sm"
-          sx={{
-            flex: 1,
-            bgcolor: 'transparent',
-            color: '#f8fafc',
-            fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
-            fontSize: '0.85rem',
-            p: 0,
-            '&::before': { display: 'none !important' },
-            '& input': {
-              color: '#f8fafc',
-              p: 0,
-              '&::placeholder': {
-                color: 'rgba(148, 163, 184, 0.45)',
+          {/* Inline Input Field */}
+          <Input
+            slotProps={{
+              input: {
+                ref: inputRef,
+                autoFocus: true,
+                autoComplete: 'off',
+                autoCorrect: 'off',
+                autoCapitalize: 'off',
+                spellCheck: false,
               },
-            },
-          }}
-        />
+            }}
+            placeholder={isCrystalDefeated ? 'Cristal destruído!' : ''}
+            value={currentInput}
+            onChange={(e) => setCurrentInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isCrystalDefeated || castSpellMutation.isPending}
+            variant="plain"
+            size="sm"
+            sx={{
+              flex: 1,
+              bgcolor: 'transparent',
+              color: '#f8fafc',
+              fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+              fontSize: '0.85rem',
+              p: 0,
+              minHeight: 'unset',
+              border: 'none',
+              boxShadow: 'none',
+              '&::before': { display: 'none !important' },
+              '&:focus-within': {
+                boxShadow: 'none !important',
+                borderColor: 'transparent !important',
+              },
+              '& input': {
+                color: '#f8fafc',
+                p: 0,
+                border: 'none',
+                outline: 'none',
+                caretColor: '#a855f7',
+                fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+                fontSize: '0.85rem',
+                lineHeight: 1.45,
+                '&::placeholder': {
+                  color: 'rgba(148, 163, 184, 0.45)',
+                },
+              },
+            }}
+          />
 
-        {/* Hidden submit button to support Enter key form submission */}
-        <button type="submit" style={{ display: 'none' }} disabled={isCrystalDefeated || castSpellMutation.isPending} />
+          {/* Hidden submit button to support Enter key form submission */}
+          <button
+            type="submit"
+            style={{ display: 'none' }}
+            disabled={isCrystalDefeated || castSpellMutation.isPending}
+          />
+        </Box>
       </Box>
     </Card>
   );

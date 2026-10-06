@@ -15,7 +15,7 @@ export default function SpellHistoryList({ recentCasts = [], showCastBy = true }
       borderRadius: "lg",
       height: '100%',
       overflow: 'hidden',
-      display: 'flex',
+      display: { xs: 'none', md: 'flex' },
       flexDirection: 'column',
       maxWidth: 300,
       width: '100%',

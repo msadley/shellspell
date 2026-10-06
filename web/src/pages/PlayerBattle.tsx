@@ -120,7 +120,7 @@ export default function PlayerBattle() {
         gridTemplateColumns: { xs: '1fr', md: '1fr minmax(auto, 300px)' },
         gridTemplateRows: isTerminalMaximized
           ? '1fr'
-          : { xs: '1fr minmax(140px, 180px)', md: '1fr minmax(160px, 200px)' },
+          : { xs: 'auto 1fr', md: 'auto 1fr' },
         gridTemplateAreas: isTerminalMaximized
           ? {
               xs: '"input"',
@@ -136,19 +136,25 @@ export default function PlayerBattle() {
                 "input log"
               `,
             },
-        gap: 2,
+        gap: { xs: 1.5, md: 2 },
+        height: '100vh',
+        maxHeight: '100vh',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
       }}
     >
       {/* CRYSTAL COLUMN - Center (hidden when terminal is maximized) */}
       {!isTerminalMaximized && (
         <Stack 
-          spacing={2} 
+          spacing={1} 
           alignItems="stretch" 
           justifyContent="flex-start"
           sx={{
             gridArea: 'crystal',
-            p: { xs: 1, md: 2 },
-            position: 'relative'
+            p: { xs: 1, md: 1.5 },
+            position: 'relative',
+            minHeight: 0,
+            overflow: 'hidden',
           }}
         >
           <CrystalDisplay
@@ -157,7 +163,7 @@ export default function PlayerBattle() {
             isCrystalDefeated={isCrystalDefeated}
             layout="title-top"
             titleAlign="left"
-            maxCrystalHeight={{ xs: '26vh', md: '40vh' }}
+            maxCrystalHeight={{ xs: '18vh', md: '22vh' }}
           />
         </Stack>
       )}

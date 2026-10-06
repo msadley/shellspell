@@ -12,6 +12,8 @@ export default function BattleGridContainer({ children, sx, ...props }: BattleGr
       sx={{
         minHeight: '100vh',
         height: '100vh',
+        maxHeight: '100vh',
+        boxSizing: 'border-box',
         backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${dungeonBg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
