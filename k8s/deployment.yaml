@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shellspell
+---
+# Backend REST API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: shellspell
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: shellspell-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            # Connects directly to CloudNativePG primary read-write service (db-rw:5432)
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://db-rw:5432/shellspell
+            - name: SPRING_DATASOURCE_USERNAME
+              value: shellspell
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: shellspell
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: update
+            - name: JWT_SECRET
+              value: "9a2f98287813b5d2b77a063b4f62557e1c8d7698547432f416e88514930d6bf4"
+            - name: JWT_EXPIRATION_MS
+              value: "86400000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: shellspell
+spec:
+  ports:
+    - port: 8080
+  selector:
+    app: backend
+---
+# Frontend Web UI
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-conf
+  namespace: shellspell
+data:
+  default.conf: |
+    server {
+        listen 80;
+        location / {
+            root /usr/share/nginx/html;
+            try_files $uri $uri/ /index.html;
+        }
+        location /api {
+            proxy_pass http://backend:8080;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_read_timeout 3600s;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: shellspell
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: shellspell-frontend:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+      volumes:
+        - name: conf
+          configMap:
+            name: frontend-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: shellspell
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: frontend

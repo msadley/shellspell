@@ -38,3 +38,4 @@ shellspell.db
 shellspell.db-journal
 
 .env
+**/node_modules
